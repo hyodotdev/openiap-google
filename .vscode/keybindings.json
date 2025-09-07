@@ -1,0 +1,7 @@
+[
+    {
+        "key": "cmd+shift+r",
+        "command": "workbench.action.tasks.runTask",
+        "args": "🚀 Run Example App"
+    }
+]

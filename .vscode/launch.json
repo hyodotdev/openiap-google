@@ -1,0 +1,49 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "🚀 Android: Run Example (install & start)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "bash",
+            "runtimeArgs": [
+                "-lc",
+                "./gradlew :Example:installDebug && adb shell am start -n dev.hyo.martie/.MainActivity"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "▶️ Android: Start Example Activity",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "bash",
+            "runtimeArgs": [
+                "-lc",
+                "adb shell am start -n dev.hyo.martie/.MainActivity"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "🧱 Android: Assemble Example (debug)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "bash",
+            "runtimeArgs": [
+                "-lc",
+                "./gradlew :Example:assembleDebug"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "📜 Android: Logcat (OpenIAP & Example)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "bash",
+            "runtimeArgs": [
+                "-lc",
+                "adb logcat -s OpenIAP:V MainActivity:V ActivityManager:W AndroidRuntime:E"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}

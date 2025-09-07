@@ -1,0 +1,43 @@
+{
+    "java.project.sourcePaths": [
+        "openiap/src/main/java",
+        "sample/src/main/java"
+    ],
+    "java.project.resourcePaths": [
+        "openiap/src/main/res",
+        "sample/src/main/res"
+    ],
+    "files.associations": {
+        "*.gradle": "groovy",
+        "*.gradle.kts": "kotlin"
+    },
+    "android.adbPath": "~/Library/Android/sdk/platform-tools/adb",
+    "android.sdkPath": "~/Library/Android/sdk",
+    "kotlin.suggest.noCompletion.enabled": false,
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.compile.nullAnalysis.mode": "automatic",
+    "files.exclude": {
+        "**/build/": true,
+        "**/.gradle/": true,
+        "**/local.properties": true,
+        "**/*.ts": true,
+        "**/*.tsx": true,
+        "**/*.js": true,
+        "**/*.jsx": true,
+        "**/tsconfig.json": true,
+        "**/package.json": true,
+        "**/node_modules/": true
+    },
+    "search.exclude": {
+        "**/build/": true,
+        "**/.gradle/": true,
+        "**/local.properties": true,
+        "**/node_modules/": true
+    },
+    "gradle.nestedProjects": true,
+    "gradle.javaDebug": true,
+    "typescript.validate.enable": false,
+    "javascript.validate.enable": false,
+    "typescript.tsc.autoDetect": "off",
+    "npm.autoDetect": "off"
+}
