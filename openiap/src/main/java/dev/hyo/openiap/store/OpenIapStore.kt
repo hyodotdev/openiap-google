@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import dev.hyo.openiap.OpenIapModule
 import dev.hyo.openiap.OpenIapError
+import dev.hyo.openiap.OpenIapProtocol
 import dev.hyo.openiap.models.*
 import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
 import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
@@ -16,8 +17,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * Convenience store that wraps OpenIapModule and provides spec-aligned, suspend APIs
  * with observable StateFlows for UI layers (Compose/XML) to consume.
  */
-class OpenIapStore(context: Context) {
-    private val module = OpenIapModule(context)
+class OpenIapStore(private val module: OpenIapProtocol) {
+    constructor(context: Context) : this(OpenIapModule(context))
 
     // Public state
     private val _isConnected = MutableStateFlow(false)
@@ -62,7 +63,7 @@ class OpenIapStore(context: Context) {
 
     // Expose a way to set the current Activity for purchase flows
     fun setActivity(activity: Activity?) {
-        module.setActivity(activity)
+        (module as? OpenIapModule)?.setActivity(activity)
     }
 
     init {
