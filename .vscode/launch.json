@@ -55,6 +55,17 @@
                 "./scripts/open-android-studio.sh"
             ],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "🧪 OpenIAP: Run Unit Tests",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "bash",
+            "runtimeArgs": [
+                "-lc",
+                "./gradlew :openiap:test --no-daemon"
+            ],
+            "console": "integratedTerminal"
         }
     ]
 }
