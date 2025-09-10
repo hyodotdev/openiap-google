@@ -15,6 +15,18 @@
             </intent-filter>
         </activity>
 
+        <!-- Compatibility stub: redirects legacy deep links to Compose screen -->
+        <activity
+            android:name=".PurchaseFlowActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
     </application>
 
 </manifest>

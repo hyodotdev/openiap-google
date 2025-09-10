@@ -6,6 +6,8 @@ import java.lang.ref.WeakReference
 import android.util.Log
 import com.google.gson.Gson
 import com.android.billingclient.api.*
+import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
+import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
 import dev.hyo.openiap.models.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -20,7 +22,10 @@ import kotlin.coroutines.resumeWithException
 class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUpdatedListener {
     
     private var billingClient: BillingClient? = null
-    private var currentPurchaseCallback: ((Result<OpenIapPurchase?>) -> Unit)? = null
+    // Best-effort promise-style result for debugging, plus event listeners
+    private var currentPurchaseCallback: ((Result<List<OpenIapPurchase>>) -> Unit)? = null
+    private val purchaseUpdateListeners = mutableSetOf<OpenIapPurchaseUpdateListener>()
+    private val purchaseErrorListeners = mutableSetOf<OpenIapPurchaseErrorListener>()
     private var currentActivityRef: WeakReference<Activity>? = null
     private val gson = Gson()
     private val TAG = "OpenIapModule"
@@ -130,35 +135,39 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
     override suspend fun requestPurchase(
         request: RequestPurchaseAndroidProps,
         type: ProductRequest.ProductRequestType
-    ): OpenIapPurchase? = withContext(Dispatchers.IO) {
+    ): List<OpenIapPurchase> = withContext(Dispatchers.IO) {
         val activity = currentActivityRef?.get() ?: (context as? Activity)
-            ?: throw dev.hyo.openiap.OpenIapError.MissingCurrentActivity
-        
+        if (activity == null) {
+            // Event-based error reporting
+            val err = OpenIapError.MissingCurrentActivity
+            purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
+            return@withContext emptyList()
+        }
+
         suspendCancellableCoroutine { continuation ->
             currentPurchaseCallback = { result ->
-                continuation.resumeWith(result)
+                continuation.resume(result.getOrElse { emptyList() })
             }
-            
             // Query product details first
             val productList = request.skus.map { sku ->
                 QueryProductDetailsParams.Product.newBuilder()
                     .setProductId(sku)
                     .setProductType(
-                        if (type == ProductRequest.ProductRequestType.SUBS) 
-                            BillingClient.ProductType.SUBS 
+                        if (type == ProductRequest.ProductRequestType.SUBS)
+                            BillingClient.ProductType.SUBS
                         else BillingClient.ProductType.INAPP
                     )
                     .build()
             }
-            
+
             val queryParams = QueryProductDetailsParams.newBuilder()
                 .setProductList(productList)
                 .build()
-            
+
             billingClient?.queryProductDetailsAsync(queryParams) { billingResult, productDetailsList ->
-                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && 
-                    productDetailsList != null && productDetailsList.isNotEmpty()) {
-                    
+                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK &&
+                    productDetailsList != null && productDetailsList.isNotEmpty()
+                ) {
                     val productDetails = productDetailsList.first()
                     Log.d(TAG, "queryProductDetails OK: sku=${productDetails.productId}, title=${productDetails.title}, type=$type")
                     val pdParamsBuilder = BillingFlowParams.ProductDetailsParams.newBuilder()
@@ -170,17 +179,16 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                             ?.offerToken
                         if (offerToken.isNullOrEmpty()) {
                             Log.w(TAG, "No subscription offer available for ${request.skus}")
-                            currentPurchaseCallback = null
-                            continuation.resumeWithException(
-                                Exception("No subscription offer available for ${request.skus}")
-                            )
+                            val err = OpenIapError.SkuOfferMismatch
+                            purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
+                            currentPurchaseCallback?.invoke(Result.success(emptyList()))
                             return@queryProductDetailsAsync
                         }
                         Log.d(TAG, "Using offerToken=$offerToken for SUBS purchase")
                         pdParamsBuilder.setOfferToken(offerToken)
                     }
                     val productDetailsParamsList = listOf(pdParamsBuilder.build())
-                    
+
                     val billingFlowParams = BillingFlowParams.newBuilder()
                         .setProductDetailsParamsList(productDetailsParamsList)
                         .apply {
@@ -188,22 +196,25 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                             request.obfuscatedProfileIdAndroid?.let { setObfuscatedProfileId(it) }
                         }
                         .build()
-                    
+
                     val flowResult = billingClient?.launchBillingFlow(activity, billingFlowParams)
                     Log.d(TAG, "launchBillingFlow result=${flowResult?.responseCode} msg=${flowResult?.debugMessage}")
                     if (flowResult == null || flowResult.responseCode != BillingClient.BillingResponseCode.OK) {
-                        currentPurchaseCallback = null
-                        continuation.resumeWithException(
-                            Exception("Billing flow failed: ${flowResult?.debugMessage ?: "unknown"}")
-                        )
+                        val err = OpenIapError.PurchaseFailed(flowResult?.debugMessage ?: "Billing flow failed")
+                        purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
+                        currentPurchaseCallback?.invoke(Result.success(emptyList()))
                     }
+                    // Do not complete here; wait for onPurchasesUpdated to resolve the result
                 } else {
                     Log.w(TAG, "queryProductDetails failed: code=${billingResult.responseCode} msg=${billingResult.debugMessage}")
-                    currentPurchaseCallback = null
-                    continuation.resumeWithException(
-                        Exception("Product not found: ${request.skus}")
-                    )
+                    val err = OpenIapError.QueryProduct(billingResult.debugMessage ?: "Product not found: ${request.skus}")
+                    purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
+                    currentPurchaseCallback?.invoke(Result.success(emptyList()))
                 }
+            } ?: run {
+                val err = OpenIapError.NotPrepared
+                purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
+                currentPurchaseCallback?.invoke(Result.success(emptyList()))
             }
         }
     }
@@ -270,6 +281,28 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
             // Internally use restorePurchases to get all purchases
             restorePurchases()
         }
+
+    override suspend fun getActiveSubscriptions(subscriptionIds: List<String>?): List<OpenIapActiveSubscription> =
+        withContext(Dispatchers.IO) {
+            val subs = queryPurchases(BillingClient.ProductType.SUBS)
+            val filtered = if (subscriptionIds.isNullOrEmpty()) subs else subs.filter { it.productId in subscriptionIds }
+            filtered.map {
+                OpenIapActiveSubscription(
+                    productId = it.productId,
+                    isActive = true,
+                    transactionId = it.id,
+                    purchaseToken = it.purchaseToken,
+                    transactionDate = it.transactionDate,
+                    platform = "android",
+                    autoRenewingAndroid = it.autoRenewingAndroid
+                )
+            }
+        }
+
+    override suspend fun hasActiveSubscriptions(subscriptionIds: List<String>?): Boolean =
+        withContext(Dispatchers.IO) {
+            getActiveSubscriptions(subscriptionIds).isNotEmpty()
+        }
     
     /**
      * Private method to restore purchases
@@ -320,6 +353,9 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
         // In production, send the purchase token to your backend for validation
         return null
     }
+
+    override suspend fun validateReceipt(options: ReceiptValidationProps): ReceiptValidationResultAndroid? =
+        validateReceipt(options.sku, options.androidOptions)
     
     // ============================================================================
     // PurchasesUpdatedListener Implementation
@@ -331,27 +367,29 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
             Log.d(TAG, "[Purchase $index] token=${p.purchaseToken} orderId=${p.orderId} state=${p.purchaseState} autoRenew=${p.isAutoRenewing} acknowledged=${p.isAcknowledged} products=${p.products} originalJson=${p.originalJson}")
         }
         if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
-            val purchase = purchases.firstOrNull()
-            if (purchase != null) {
-                val openIapPurchase = convertToOpenIapPurchase(
-                    purchase,
-                    if (purchase.products.any { it.contains("subs") }) 
-                        BillingClient.ProductType.SUBS 
-                    else BillingClient.ProductType.INAPP
+            val mapped = purchases.map { p ->
+                convertToOpenIapPurchase(
+                    p,
+                    if (p.products.any { it.contains("subs") }) BillingClient.ProductType.SUBS else BillingClient.ProductType.INAPP
                 )
-                Log.d(TAG, "Mapped OpenIapPurchase=${gson.toJson(openIapPurchase)}")
-                currentPurchaseCallback?.invoke(Result.success(openIapPurchase))
-            } else {
-                Log.d(TAG, "No purchase in list")
-                currentPurchaseCallback?.invoke(Result.success(null))
             }
+            Log.d(TAG, "Mapped OpenIapPurchases=${gson.toJson(mapped)}")
+            // Broadcast each event to listeners
+            mapped.forEach { openIapPurchase ->
+                purchaseUpdateListeners.forEach { listener ->
+                    runCatching { listener.onPurchaseUpdated(openIapPurchase) }
+                }
+            }
+            currentPurchaseCallback?.invoke(Result.success(mapped))
         } else {
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.USER_CANCELED -> {
                     Log.i(TAG, "User cancelled purchase flow")
-                    currentPurchaseCallback?.invoke(
-                        Result.failure(dev.hyo.openiap.OpenIapError.UserCancelled)
-                    )
+                    val err = dev.hyo.openiap.OpenIapError.UserCancelled
+                    purchaseErrorListeners.forEach { listener ->
+                        runCatching { listener.onPurchaseError(err) }
+                    }
+                    currentPurchaseCallback?.invoke(Result.success(emptyList()))
                 }
                 else -> {
                     val error = dev.hyo.openiap.OpenIapError.fromBillingResponseCode(
@@ -360,7 +398,10 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                     )
                     Log.w(TAG, "Purchase failed: code=${billingResult.responseCode} msg=${error.message}")
                     // Surface framework-specific error upstream (maintains type for UserCancelled, etc.)
-                    currentPurchaseCallback?.invoke(Result.failure(error))
+                    purchaseErrorListeners.forEach { listener ->
+                        runCatching { listener.onPurchaseError(error) }
+                    }
+                    currentPurchaseCallback?.invoke(Result.success(emptyList()))
                 }
             }
         }
@@ -503,5 +544,34 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
         // Google Play Billing doesn't have a direct API for this
         // Typically handled by clearing internal caches or retrying pending purchases
         println("flushFailedPurchaseCachedAsPendingAndroid called - no direct Google Play Billing API available")
+    }
+
+    override suspend fun deepLinkToSubscriptions(options: DeepLinkOptions) {
+        val pkg = options.packageNameAndroid ?: context.packageName
+        val uri = if (!options.skuAndroid.isNullOrEmpty()) {
+            android.net.Uri.parse("https://play.google.com/store/account/subscriptions?sku=${options.skuAndroid}&package=$pkg")
+        } else {
+            android.net.Uri.parse("https://play.google.com/store/account/subscriptions?package=$pkg")
+        }
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri).apply {
+            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
+
+    override fun addPurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener) {
+        purchaseUpdateListeners.add(listener)
+    }
+
+    override fun removePurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener) {
+        purchaseUpdateListeners.remove(listener)
+    }
+
+    override fun addPurchaseErrorListener(listener: OpenIapPurchaseErrorListener) {
+        purchaseErrorListeners.add(listener)
+    }
+
+    override fun removePurchaseErrorListener(listener: OpenIapPurchaseErrorListener) {
+        purchaseErrorListeners.remove(listener)
     }
 }

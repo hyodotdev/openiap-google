@@ -22,6 +22,7 @@ import dev.hyo.openiap.models.OpenIapPurchase
 @Composable
 fun ActiveSubscriptionListItem(
     purchase: OpenIapPurchase,
+    statusText: String? = null,
     onClick: () -> Unit = {}
 ) {
     OutlinedCard(
@@ -87,6 +88,14 @@ fun ActiveSubscriptionListItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textSecondary
                 )
+
+                if (statusText != null) {
+                    Text(
+                        statusText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textSecondary
+                    )
+                }
             }
 
             Icon(
@@ -98,4 +107,3 @@ fun ActiveSubscriptionListItem(
         }
     }
 }
-

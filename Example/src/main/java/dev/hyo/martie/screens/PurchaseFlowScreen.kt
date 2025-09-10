@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import android.app.Activity
+import android.content.Context
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -23,6 +24,8 @@ import dev.hyo.openiap.IapContext
 import dev.hyo.openiap.store.OpenIapStore
 import dev.hyo.openiap.models.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import dev.hyo.openiap.OpenIapError
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
@@ -37,8 +40,8 @@ fun PurchaseFlowScreen(
     val context = LocalContext.current
     val activity = context as? Activity
     val uiScope = rememberCoroutineScope()
-    val iapStore = storeParam ?: (IapContext.LocalOpenIapStore.current
-        ?: IapContext.rememberOpenIapStore())
+    val appContext = context.applicationContext as Context
+    val iapStore = storeParam ?: remember(appContext) { OpenIapStore(appContext) }
     val products by iapStore.products.collectAsState()
     val purchases by iapStore.availablePurchases.collectAsState()
     val status by iapStore.status.collectAsState()
@@ -62,6 +65,7 @@ fun PurchaseFlowScreen(
             try {
                 val connected = iapStore.initConnection()
                 if (connected) {
+                    iapStore.setActivity(activity)
                     iapStore.fetchProducts(
                         skus = IapConstants.INAPP_SKUS,
                         type = ProductRequest.ProductRequestType.INAPP
@@ -71,7 +75,11 @@ fun PurchaseFlowScreen(
             } catch (_: Exception) { }
         }
         onDispose {
-            startupScope.launch { runCatching { iapStore.endConnection() } }
+            // End connection and clear listeners when this screen leaves (per-screen lifecycle)
+            startupScope.launch {
+                runCatching { iapStore.endConnection() }
+                runCatching { iapStore.clear() }
+            }
         }
     }
     
@@ -186,41 +194,13 @@ fun PurchaseFlowScreen(
                         isPurchasing = status.isPurchasing(product.id),
                         onPurchase = {
                             scope.launch {
-                                try {
-                                    val reqType = if (product.type == OpenIapProduct.ProductType.SUBS)
-                                        ProductRequest.ProductRequestType.SUBS else ProductRequest.ProductRequestType.INAPP
-                                    iapStore.setActivity(activity)
-                                    val purchase = iapStore.requestPurchase(
-                                        params = RequestPurchaseAndroidProps(skus = listOf(product.id)),
-                                        type = reqType
-                                    )
-                                    if (purchase != null) {
-                                        val isConsumable = product.type == OpenIapProduct.ProductType.INAPP &&
-                                                (product.id.contains("consumable", true) || product.id.contains("bulb", true))
-                                    val ok = iapStore.finishTransaction(purchase, isConsumable)
-                                    iapStore.loadPurchases()
-                                        showPurchaseResult = true
-                                        purchaseResultMessage = if (ok) {
-                                            "Purchase successful: ${product.title}"
-                                        } else {
-                                            "Purchase successful but finish failed: ${product.title}"
-                                        }
-                                        selectedProduct = null
-                                    } else {
-                                        showError = true
-                                        errorMessage = "Purchase cancelled"
-                                    }
-                                } catch (e: Exception) {
-                                    // Graceful handling for user cancel
-                                    val msg = e.message ?: "Purchase failed"
-                                    if (e is OpenIapError.UserCancelled || msg.contains("cancel", true)) {
-                                        showError = true
-                                        errorMessage = "Purchase cancelled by user"
-                                    } else {
-                                        showError = true
-                                        errorMessage = msg
-                                    }
-                                }
+                                val reqType = if (product.type == OpenIapProduct.ProductType.SUBS)
+                                    ProductRequest.ProductRequestType.SUBS else ProductRequest.ProductRequestType.INAPP
+                                iapStore.setActivity(activity)
+                                iapStore.requestPurchase(
+                                    params = RequestPurchaseAndroidProps(skus = listOf(product.id)),
+                                    type = reqType
+                                )
                             }
                         },
                         onClick = {
@@ -346,6 +326,58 @@ fun PurchaseFlowScreen(
         }
     }
     
+    // Simple helper: simulate server-side receipt validation
+    suspend fun validateReceiptOnServer(purchase: OpenIapPurchase): Boolean {
+        // TODO: Replace with your real backend API call
+        // e.g., POST purchase.purchaseToken to your server and verify
+        return true
+    }
+
+    // Auto-handle purchase: validate on server then finish
+    // IMPORTANT: Implement real server-side receipt validation in validateReceiptOnServer()
+    LaunchedEffect(lastPurchase?.id) {
+        val purchase = lastPurchase ?: return@LaunchedEffect
+        try {
+            // 1) Server-side validation (replace with your backend call)
+            val valid = validateReceiptOnServer(purchase)
+            if (!valid) {
+                showError = true
+                errorMessage = "Receipt validation failed"
+                return@LaunchedEffect
+            }
+            // 2) Determine consumable vs non-consumable
+            val product = products.find { it.id == purchase.productId }
+            val isConsumable = product?.let {
+                it.type == OpenIapProduct.ProductType.INAPP &&
+                        (it.id.contains("consumable", true) || it.id.contains("bulb", true))
+            } == true
+
+            // 3) Ensure connection (retry briefly if needed)
+            if (!connectionStatus) {
+                runCatching { iapStore.initConnection() }
+                val started = System.currentTimeMillis()
+                while (!iapStore.isConnected.first() && System.currentTimeMillis() - started < 1500) {
+                    delay(100)
+                }
+            }
+
+            // 4) Finish transaction
+            val ok = iapStore.finishTransaction(purchase, isConsumable)
+            if (!ok) {
+                showError = true
+                errorMessage = "finishTransaction failed"
+            } else {
+                iapStore.loadPurchases()
+                showPurchaseResult = true
+                purchaseResultMessage = "Purchase finished successfully"
+                selectedProduct = null
+            }
+        } catch (e: Exception) {
+            showError = true
+            errorMessage = e.message ?: "Failed to finish purchase"
+        }
+    }
+
     // Error Dialog
     if (showError) {
         AlertDialog(
@@ -367,40 +399,13 @@ fun PurchaseFlowScreen(
             onDismiss = { selectedProduct = null },
             onPurchase = {
                 uiScope.launch {
-                    try {
-                        val reqType = if (product.type == OpenIapProduct.ProductType.SUBS)
-                            ProductRequest.ProductRequestType.SUBS else ProductRequest.ProductRequestType.INAPP
-                        iapStore.setActivity(activity)
-                        val purchase = iapStore.requestPurchase(
-                            params = RequestPurchaseAndroidProps(skus = listOf(product.id)),
-                            type = reqType
-                        )
-                        if (purchase != null) {
-                            val isConsumable = product.type == OpenIapProduct.ProductType.INAPP &&
-                                    (product.id.contains("consumable", true) || product.id.contains("bulb", true))
-                            val ok = iapStore.finishTransaction(purchase, isConsumable)
-                            iapStore.loadPurchases()
-                            showPurchaseResult = true
-                            purchaseResultMessage = if (ok) {
-                                "Purchase successful: ${product.title}"
-                            } else {
-                                "Purchase successful but finish failed: ${product.title}"
-                            }
-                            selectedProduct = null
-                        } else {
-                            showError = true
-                            errorMessage = "Purchase cancelled"
-                        }
-                    } catch (e: Exception) {
-                        val msg = e.message ?: "Purchase failed"
-                        if (e is OpenIapError.UserCancelled || msg.contains("cancel", true)) {
-                            showError = true
-                            errorMessage = "Purchase cancelled by user"
-                        } else {
-                            showError = true
-                            errorMessage = msg
-                        }
-                    }
+                    val reqType = if (product.type == OpenIapProduct.ProductType.SUBS)
+                        ProductRequest.ProductRequestType.SUBS else ProductRequest.ProductRequestType.INAPP
+                    iapStore.setActivity(activity)
+                    iapStore.requestPurchase(
+                        params = RequestPurchaseAndroidProps(skus = listOf(product.id)),
+                        type = reqType
+                    )
                 }
             },
             isPurchasing = status.isPurchasing(product.id)

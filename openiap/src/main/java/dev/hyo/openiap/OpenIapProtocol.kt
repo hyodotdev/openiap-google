@@ -1,5 +1,7 @@
 package dev.hyo.openiap
 
+import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
+import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
 import dev.hyo.openiap.models.*
 
 /**
@@ -48,6 +50,21 @@ interface OpenIapProtocol {
         options: PurchaseOptions? = null
     ): List<OpenIapPurchase>
 
+    /**
+     * Get all active subscriptions with details.
+     * If subscriptionIds is provided, filters to those SKUs; otherwise returns all.
+     */
+    suspend fun getActiveSubscriptions(
+        subscriptionIds: List<String>? = null
+    ): List<OpenIapActiveSubscription>
+
+    /**
+     * Check if there is at least one active subscription.
+     */
+    suspend fun hasActiveSubscriptions(
+        subscriptionIds: List<String>? = null
+    ): Boolean
+
     // ============================================================================
     // Purchase Operations
     // ============================================================================
@@ -61,7 +78,7 @@ interface OpenIapProtocol {
     suspend fun requestPurchase(
         request: RequestPurchaseAndroidProps,
         type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.INAPP
-    ): OpenIapPurchase?
+    ): List<OpenIapPurchase>
     
     /**
      * Complete a purchase transaction.
@@ -88,6 +105,11 @@ interface OpenIapProtocol {
         androidOptions: ReceiptValidationProps.AndroidValidationOptions? = null
     ): ReceiptValidationResultAndroid?
 
+    /**
+     * Overload matching openiap.dev validateReceipt(options: ReceiptValidationProps)
+     */
+    suspend fun validateReceipt(options: ReceiptValidationProps): ReceiptValidationResultAndroid?
+
     // ============================================================================
     // Android-Specific APIs
     // ============================================================================
@@ -113,4 +135,22 @@ interface OpenIapProtocol {
      * Clears any failed purchases that are cached as pending.
      */
     suspend fun flushFailedPurchaseCachedAsPendingAndroid()
+
+    // ============================================================================
+    // Subscription Management / UX helpers
+    // ============================================================================
+
+    /**
+     * Open native subscription management interface (Android deep link).
+     */
+    suspend fun deepLinkToSubscriptions(options: DeepLinkOptions)
+
+    // ============================================================================
+    // Event Listeners (align with event-based request semantics)
+    // ============================================================================
+
+    fun addPurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener)
+    fun removePurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener)
+    fun addPurchaseErrorListener(listener: OpenIapPurchaseErrorListener)
+    fun removePurchaseErrorListener(listener: OpenIapPurchaseErrorListener)
 }

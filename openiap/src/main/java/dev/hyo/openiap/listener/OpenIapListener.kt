@@ -6,7 +6,7 @@ import dev.hyo.openiap.OpenIapError
 /**
  * Listener for purchase updates
  */
-interface OpenIapPurchaseUpdateListener {
+fun interface OpenIapPurchaseUpdateListener {
     /**
      * Called when a purchase is updated
      * @param purchase The updated purchase
@@ -17,7 +17,7 @@ interface OpenIapPurchaseUpdateListener {
 /**
  * Listener for purchase errors
  */
-interface OpenIapPurchaseErrorListener {
+fun interface OpenIapPurchaseErrorListener {
     /**
      * Called when a purchase error occurs
      * @param error The error that occurred

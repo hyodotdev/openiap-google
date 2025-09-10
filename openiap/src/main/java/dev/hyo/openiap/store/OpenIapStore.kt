@@ -3,7 +3,10 @@ package dev.hyo.openiap.store
 import android.app.Activity
 import android.content.Context
 import dev.hyo.openiap.OpenIapModule
+import dev.hyo.openiap.OpenIapError
 import dev.hyo.openiap.models.*
+import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
+import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,9 +37,47 @@ class OpenIapStore(context: Context) {
     private val _status = MutableStateFlow(IapStatus())
     val status: StateFlow<IapStatus> = _status.asStateFlow()
 
+    // Prevent duplicate finishing/consuming of the same purchase token
+    private val processedPurchaseTokens = mutableSetOf<String>()
+
+    // Keep listener references to support proper removal
+    private val purchaseUpdateListener = OpenIapPurchaseUpdateListener { purchase ->
+        _currentPurchase.value = purchase
+        _status.value = _status.value.copy(
+            lastPurchaseResult = PurchaseResultData(
+                productId = purchase.productId,
+                transactionId = purchase.id,
+                message = "Purchase successful"
+            )
+        )
+    }
+    private val purchaseErrorListener = OpenIapPurchaseErrorListener { error ->
+        _status.value = _status.value.copy(
+            lastError = ErrorData(
+                code = OpenIapError.toCode(error),
+                message = error.message
+            )
+        )
+    }
+
     // Expose a way to set the current Activity for purchase flows
     fun setActivity(activity: Activity?) {
         module.setActivity(activity)
+    }
+
+    init {
+        // Wire event listeners to update Store state (event-based flow)
+        module.addPurchaseUpdateListener(purchaseUpdateListener)
+        module.addPurchaseErrorListener(purchaseErrorListener)
+    }
+
+    /**
+     * Clear listeners and transient state. Call when the screen is disposed.
+     */
+    fun clear() {
+        module.removePurchaseUpdateListener(purchaseUpdateListener)
+        module.removePurchaseErrorListener(purchaseErrorListener)
+        processedPurchaseTokens.clear()
     }
 
     // -------------------------------------------------------------------------
@@ -117,33 +158,11 @@ class OpenIapStore(context: Context) {
     suspend fun requestPurchase(
         params: RequestPurchaseAndroidProps,
         type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.INAPP
-    ): OpenIapPurchase? {
+    ): List<OpenIapPurchase> {
         val skuForStatus = params.skus.firstOrNull()
         if (skuForStatus != null) addPurchasing(skuForStatus)
         return try {
-            val purchase = module.requestPurchase(params, type)
-            _currentPurchase.value = purchase
-            if (purchase != null) {
-                _status.value = _status.value.copy(
-                    lastPurchaseResult = PurchaseResultData(
-                        productId = purchase.productId,
-                        transactionId = purchase.id,
-                        message = "Purchase successful"
-                    )
-                )
-            }
-            purchase
-        } catch (e: Exception) {
-            // Record error
-            _status.value = _status.value.copy(
-                lastError = ErrorData(
-                    code = "PURCHASE_FAILED",
-                    message = e.message ?: "Purchase failed",
-                    productId = skuForStatus
-                )
-            )
-            setError(e.message)
-            throw e
+            module.requestPurchase(params, type)
         } finally {
             if (skuForStatus != null) removePurchasing(skuForStatus)
         }
@@ -153,16 +172,42 @@ class OpenIapStore(context: Context) {
         purchase: OpenIapPurchase,
         isConsumable: Boolean = false
     ): Boolean {
+        // Skip if already acknowledged or processed
+        val token = purchase.purchaseToken ?: purchase.purchaseTokenAndroid
+        if (purchase.isAcknowledgedAndroid == true || (token != null && processedPurchaseTokens.contains(token))) {
+            return true
+        }
         return try {
             val result = module.finishTransaction(
                 FinishTransactionParams(purchase = purchase, isConsumable = isConsumable)
             )
-            result.responseCode == 0
+            val ok = result.responseCode == 0
+            if (ok && token != null) processedPurchaseTokens.add(token)
+            ok
         } catch (e: Exception) {
             setError(e.message)
             throw e
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Subscriptions
+    // -------------------------------------------------------------------------
+    suspend fun getActiveSubscriptions(subscriptionIds: List<String>? = null): List<OpenIapActiveSubscription> =
+        module.getActiveSubscriptions(subscriptionIds)
+
+    suspend fun hasActiveSubscriptions(subscriptionIds: List<String>? = null): Boolean =
+        module.hasActiveSubscriptions(subscriptionIds)
+
+    suspend fun deepLinkToSubscriptions(options: DeepLinkOptions) = module.deepLinkToSubscriptions(options)
+
+    // -------------------------------------------------------------------------
+    // Event listeners
+    // -------------------------------------------------------------------------
+    fun addPurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener) = module.addPurchaseUpdateListener(listener)
+    fun removePurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener) = module.removePurchaseUpdateListener(listener)
+    fun addPurchaseErrorListener(listener: OpenIapPurchaseErrorListener) = module.addPurchaseErrorListener(listener)
+    fun removePurchaseErrorListener(listener: OpenIapPurchaseErrorListener) = module.removePurchaseErrorListener(listener)
 
     // -------------------------------------------------------------------------
     // Status helpers

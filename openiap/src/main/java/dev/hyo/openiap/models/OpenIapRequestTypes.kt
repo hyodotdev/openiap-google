@@ -65,3 +65,12 @@ data class ProductRequest(
         }
     }
 }
+
+/**
+ * Options for deep-linking to subscription management (Android)
+ * Matches openiap.dev API shape
+ */
+data class DeepLinkOptions(
+    val skuAndroid: String? = null,
+    val packageNameAndroid: String? = null
+)
