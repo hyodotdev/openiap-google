@@ -41,6 +41,16 @@ android {
         jvmTarget = "11"
     }
 
+    // Enable Compose for composables in this library (IapContext)
+    buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion =
+            (project.findProperty("COMPOSE_COMPILER_VERSION") as String?) ?: "1.5.14"
+    }
+
     publishing {
         singleVariant("release") {
             withSourcesJar()
@@ -59,9 +69,15 @@ dependencies {
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     
     // JSON handling
     implementation("com.google.code.gson:gson:2.10.1")
+
+    // Compose runtime (for CompositionLocal provider in IapContext)
+    val composeUiVersion = (project.findProperty("COMPOSE_UI_VERSION") as String?) ?: "1.6.8"
+    implementation("androidx.compose.runtime:runtime:$composeUiVersion")
+    implementation("androidx.compose.ui:ui:$composeUiVersion")
     
     // Testing dependencies
     testImplementation("junit:junit:4.13.2")
@@ -75,7 +91,7 @@ publishing {
     publications {
         register<MavenPublication>("release") {
             groupId = project.findProperty("OPENIAP_GROUP_ID")?.toString() ?: "dev.hyo.openiap"
-            artifactId = "openiap-gms"
+            artifactId = "openiap-google"
             version = openIapVersion
 
             afterEvaluate {
@@ -85,7 +101,7 @@ publishing {
             pom {
                 name.set("OpenIAP GMS")
                 description.set("OpenIAP Android library using Google Play Billing v8")
-                url.set("https://github.com/hyodotdev/openiap-gms")
+                url.set("https://github.com/hyodotdev/openiap-google")
                 
                 licenses {
                     license {
@@ -102,9 +118,9 @@ publishing {
                 }
                 
                 scm {
-                    connection.set("scm:git:git://github.com/hyodotdev/openiap-gms.git")
-                    developerConnection.set("scm:git:ssh://git@github.com/hyodotdev/openiap-gms.git")
-                    url.set("https://github.com/hyodotdev/openiap-gms")
+                    connection.set("scm:git:git://github.com/hyodotdev/openiap-google.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/hyodotdev/openiap-google.git")
+                    url.set("https://github.com/hyodotdev/openiap-google")
                 }
             }
         }

@@ -44,6 +44,17 @@
                 "adb logcat -s OpenIAP:V MainActivity:V ActivityManager:W AndroidRuntime:E"
             ],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "🧩 Open Android Studio",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "bash",
+            "runtimeArgs": [
+                "-lc",
+                "./scripts/open-android-studio.sh"
+            ],
+            "console": "integratedTerminal"
         }
     ]
 }

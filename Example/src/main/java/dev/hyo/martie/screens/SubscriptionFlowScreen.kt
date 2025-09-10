@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,28 +17,30 @@ import androidx.compose.ui.platform.LocalContext
 import android.app.Activity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import dev.hyo.martie.models.AppColors
 import dev.hyo.martie.IapConstants
 import dev.hyo.martie.screens.uis.*
-import dev.hyo.martie.viewmodels.OpenIapStore
+import dev.hyo.openiap.IapContext
+import dev.hyo.openiap.store.OpenIapStore
 import dev.hyo.openiap.models.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-import dev.hyo.openiap.helpers.OpenIapError
+import dev.hyo.openiap.OpenIapError
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubscriptionFlowScreen(
     navController: NavController,
-    iapStore: OpenIapStore = viewModel()
+    storeParam: OpenIapStore? = null
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
     val uiScope = rememberCoroutineScope()
+    val iapStore = storeParam ?: (IapContext.LocalOpenIapStore.current
+        ?: IapContext.rememberOpenIapStore())
     val products by iapStore.products.collectAsState()
-    val purchases by iapStore.purchases.collectAsState()
+    val purchases by iapStore.availablePurchases.collectAsState()
     val status by iapStore.status.collectAsState()
     val connectionStatus by iapStore.connectionStatus.collectAsState()
     
@@ -66,7 +69,7 @@ fun SubscriptionFlowScreen(
         }
         
         onDispose {
-            iapStore.disconnect()
+            startupScope.launch { runCatching { iapStore.endConnection() } }
         }
     }
     
@@ -170,18 +173,17 @@ fun SubscriptionFlowScreen(
             }
             
             // Active Subscriptions Section
-            val activeSubscriptions = purchases.filter { it.isAutoRenewing }
+            // Treat any purchase with matching subscription SKU as subscribed
+            val activeSubscriptions = purchases.filter { it.productId in IapConstants.SUBS_SKUS }
             if (activeSubscriptions.isNotEmpty()) {
                 item {
                     SectionHeaderView(title = "Active Subscriptions")
                 }
                 
                 items(activeSubscriptions) { subscription ->
-                    SubscriptionCard(
+                    ActiveSubscriptionListItem(
                         purchase = subscription,
-                        onClick = {
-                            selectedPurchase = subscription
-                        }
+                        onClick = { selectedPurchase = subscription }
                     )
                 }
             }
@@ -196,9 +198,10 @@ fun SubscriptionFlowScreen(
                     ProductCard(
                         product = product,
                         isPurchasing = status.isPurchasing(product.id),
+                        isSubscribed = purchases.any { it.productId == product.id && it.purchaseState == OpenIapPurchase.PurchaseState.PURCHASED },
                         onPurchase = {
                             // Prevent re-purchase if already subscribed
-                            val alreadySubscribed = activeSubscriptions.any { it.productId == product.id }
+                            val alreadySubscribed = purchases.any { it.productId == product.id && it.purchaseState == OpenIapPurchase.PurchaseState.PURCHASED }
                             if (alreadySubscribed) {
                                 showError = true
                                 errorMessage = "Already subscribed to ${product.id}"
@@ -237,6 +240,9 @@ fun SubscriptionFlowScreen(
                             }
                         },
                         onClick = {
+                            selectedProduct = product
+                        },
+                        onDetails = {
                             selectedProduct = product
                         }
                     )
@@ -359,100 +365,4 @@ fun SubscriptionFlowScreen(
     }
 }
 
-@Composable
-fun SubscriptionCard(
-    purchase: OpenIapPurchase,
-    onClick: () -> Unit = {}
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = AppColors.secondary.copy(alpha = 0.1f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    purchase.productId,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = AppColors.success.copy(alpha = 0.2f)
-                    ) {
-                        Text(
-                            "ACTIVE",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.success
-                        )
-                    }
-                    
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (purchase.isAutoRenewing) {
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = AppColors.secondary.copy(alpha = 0.2f)
-                            ) {
-                                Text(
-                                    "AUTO-RENEWING",
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AppColors.secondary
-                                )
-                            }
-                        } else if (purchase.productId == "dev.hyo.martie.premium") {
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = AppColors.primary.copy(alpha = 0.2f)
-                            ) {
-                                Text(
-                                    "PREMIUM",
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AppColors.primary
-                                )
-                            }
-                        }
-                    }
-                }
-                
-                Text(
-                    "Purchased: ${java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date(purchase.transactionDate))}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textSecondary
-                )
-            }
-            
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = AppColors.textSecondary,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
-}
+// Moved to reusable component at: screens/uis/ActiveSubscriptionListItem.kt

@@ -1,7 +1,7 @@
 package dev.hyo.openiap.listener
 
 import dev.hyo.openiap.models.OpenIapPurchase
-import dev.hyo.openiap.helpers.OpenIapError
+import dev.hyo.openiap.OpenIapError
 
 /**
  * Listener for purchase updates

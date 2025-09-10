@@ -31,25 +31,6 @@ data class RequestSubscriptionAndroidProps(
 }
 
 /**
- * Product request parameters for fetching products from the store
- */
-data class ProductRequest(
-    val skus: List<String>,
-    val type: ProductRequestType = ProductRequestType.INAPP
-) {
-    enum class ProductRequestType(val value: String) {
-        INAPP("inapp"),
-        SUBS("subs"),
-        ALL("all");
-        
-        companion object {
-            fun fromString(value: String): ProductRequestType = 
-                values().find { it.value == value } ?: INAPP
-        }
-    }
-}
-
-/**
  * Parameters for finishTransaction method
  */
 data class FinishTransactionParams(
@@ -65,3 +46,22 @@ data class PurchaseOptions(
     val alsoPublishToEventListenerIOS: Boolean? = null,
     val onlyIncludeActiveItemsIOS: Boolean? = null
 )
+
+/**
+ * Backwards-compatible ProductRequest (used throughout the module)
+ */
+data class ProductRequest(
+    val skus: List<String>,
+    val type: ProductRequestType = ProductRequestType.INAPP
+) {
+    enum class ProductRequestType(val value: String) {
+        INAPP("inapp"),
+        SUBS("subs"),
+        ALL("all");
+
+        companion object {
+            fun fromString(value: String): ProductRequestType =
+                values().find { it.value == value } ?: INAPP
+        }
+    }
+}

@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dev.hyo.martie.models.AppColors
 import dev.hyo.martie.screens.*
+import dev.hyo.openiap.IapContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,7 +26,9 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = AppColors.background
                 ) {
-                    AppNavigation()
+                    IapContext.OpenIapProvider {
+                        AppNavigation()
+                    }
                 }
             }
         }

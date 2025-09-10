@@ -16,11 +16,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import dev.hyo.martie.models.AppColors
 import dev.hyo.martie.screens.uis.*
-import dev.hyo.martie.viewmodels.OpenIapStore
+import dev.hyo.openiap.IapContext
+import dev.hyo.openiap.store.OpenIapStore
 import dev.hyo.openiap.models.*
 import kotlinx.coroutines.launch
 
@@ -28,10 +28,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun AvailablePurchasesScreen(
     navController: NavController,
-    iapStore: OpenIapStore = viewModel()
+    storeParam: OpenIapStore? = null
 ) {
     val context = LocalContext.current
-    val purchases by iapStore.purchases.collectAsState()
+    val iapStore = storeParam ?: (IapContext.LocalOpenIapStore.current
+        ?: IapContext.rememberOpenIapStore())
+    val purchases by iapStore.availablePurchases.collectAsState()
     val status by iapStore.status.collectAsState()
     val connectionStatus by iapStore.connectionStatus.collectAsState()
     
@@ -55,7 +57,7 @@ fun AvailablePurchasesScreen(
             } catch (_: Exception) { }
         }
         onDispose {
-            iapStore.disconnect()
+            startupScope.launch { runCatching { iapStore.endConnection() } }
         }
     }
     
@@ -275,9 +277,8 @@ fun AvailablePurchasesScreen(
                 }
                 
                 items(subscriptions) { purchase ->
-                    PurchaseItemCard(
+                    ActiveSubscriptionListItem(
                         purchase = purchase,
-                        type = PurchaseType.SUBSCRIPTION,
                         onClick = { selectedPurchase = purchase }
                     )
                 }

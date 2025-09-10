@@ -15,29 +15,36 @@ import androidx.compose.ui.platform.LocalContext
 import android.app.Activity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import dev.hyo.martie.models.AppColors
 import dev.hyo.martie.IapConstants
 import dev.hyo.martie.screens.uis.*
-import dev.hyo.martie.viewmodels.OpenIapStore
+import dev.hyo.openiap.IapContext
+import dev.hyo.openiap.store.OpenIapStore
 import dev.hyo.openiap.models.*
 import kotlinx.coroutines.launch
-import dev.hyo.openiap.helpers.OpenIapError
+import dev.hyo.openiap.OpenIapError
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import dev.hyo.openiap.models.OpenIapSerialization
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PurchaseFlowScreen(
     navController: NavController,
-    iapStore: OpenIapStore = viewModel()
+    storeParam: OpenIapStore? = null
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
     val uiScope = rememberCoroutineScope()
+    val iapStore = storeParam ?: (IapContext.LocalOpenIapStore.current
+        ?: IapContext.rememberOpenIapStore())
     val products by iapStore.products.collectAsState()
-    val purchases by iapStore.purchases.collectAsState()
+    val purchases by iapStore.availablePurchases.collectAsState()
     val status by iapStore.status.collectAsState()
+    val lastPurchase by iapStore.currentPurchase.collectAsState(initial = null)
     val connectionStatus by iapStore.connectionStatus.collectAsState()
+    val clipboard = LocalClipboardManager.current
     
     var showPurchaseResult by remember { mutableStateOf(false) }
     var purchaseResultMessage by remember { mutableStateOf("") }
@@ -64,7 +71,7 @@ fun PurchaseFlowScreen(
             } catch (_: Exception) { }
         }
         onDispose {
-            iapStore.disconnect()
+            startupScope.launch { runCatching { iapStore.endConnection() } }
         }
     }
     
@@ -218,6 +225,9 @@ fun PurchaseFlowScreen(
                         },
                         onClick = {
                             selectedProduct = product
+                        },
+                        onDetails = {
+                            selectedProduct = product
                         }
                     )
                 }
@@ -233,10 +243,33 @@ fun PurchaseFlowScreen(
             // Purchase Result
             if (showPurchaseResult) {
                 item {
-                    PurchaseResultCard(
-                        message = purchaseResultMessage,
-                        onDismiss = { showPurchaseResult = false }
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PurchaseResultCard(
+                            message = purchaseResultMessage,
+                            onDismiss = { showPurchaseResult = false }
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    lastPurchase?.let { p ->
+                                        val json = OpenIapSerialization.toJson(p)
+                                        clipboard.setText(AnnotatedString(json))
+                                    }
+                                },
+                                enabled = lastPurchase != null
+                            ) { Text("Copy Result") }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            OutlinedButton(
+                                onClick = { selectedPurchase = lastPurchase },
+                                enabled = lastPurchase != null
+                            ) { Text("Details") }
+                        }
+                    }
                 }
             }
             
@@ -271,13 +304,14 @@ fun PurchaseFlowScreen(
                 ) {
                     Button(
                         onClick = {
-                            iapStore.restorePurchases { success, message ->
-                                if (success) {
+                            scope.launch {
+                                try {
+                                    val restored = iapStore.restorePurchases()
                                     showPurchaseResult = true
-                                    purchaseResultMessage = message
-                                } else {
+                                    purchaseResultMessage = "Restored ${restored.size} purchases"
+                                } catch (e: Exception) {
                                     showError = true
-                                    errorMessage = message
+                                    errorMessage = e.message ?: "Restore failed"
                                 }
                             }
                         },

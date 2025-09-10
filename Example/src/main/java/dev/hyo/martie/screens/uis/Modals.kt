@@ -17,6 +17,9 @@ import androidx.compose.ui.window.DialogProperties
 import dev.hyo.martie.models.AppColors
 import dev.hyo.openiap.models.OpenIapProduct
 import dev.hyo.openiap.models.OpenIapPurchase
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import dev.hyo.openiap.models.OpenIapSerialization
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -261,6 +264,7 @@ fun PurchaseDetailModal(
     purchase: OpenIapPurchase,
     onDismiss: () -> Unit
 ) {
+    val clipboard = LocalClipboardManager.current
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -449,11 +453,22 @@ fun PurchaseDetailModal(
                 }
                 
                 // Close Button
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Close")
+                    OutlinedButton(
+                        onClick = {
+                            val json = OpenIapSerialization.toJson(purchase)
+                            clipboard.setText(AnnotatedString(json))
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Copy JSON") }
+
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Close") }
                 }
             }
         }

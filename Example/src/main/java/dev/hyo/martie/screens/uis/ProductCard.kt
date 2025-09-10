@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.hyo.martie.models.AppColors
 import dev.hyo.openiap.models.OpenIapProduct
@@ -17,7 +18,9 @@ fun ProductCard(
     product: OpenIapProduct,
     isPurchasing: Boolean = false,
     onPurchase: () -> Unit,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onDetails: () -> Unit = onClick,
+    isSubscribed: Boolean = false
 ) {
     Card(
         modifier = Modifier
@@ -39,10 +42,14 @@ fun ProductCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // Prefer a cleaner title (avoid app suffix in parentheses if present)
+                val mainTitle = product.displayName ?: product.title.substringBefore(" (")
                 Text(
-                    product.title,
+                    mainTitle,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
                 
                 Text(
@@ -73,12 +80,29 @@ fun ProductCard(
                         )
                     }
                     
-                    Text(
-                        product.id,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = AppColors.textSecondary
-                    )
+                    if (isSubscribed) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = AppColors.success.copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                "SUBSCRIBED",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AppColors.success
+                            )
+                        }
+                    }
                 }
+
+                // Show product SKU below badges, allow wrapping to avoid ugly cuts
+                Text(
+                    product.id,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AppColors.textSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
             
             Column(
@@ -91,18 +115,26 @@ fun ProductCard(
                     fontWeight = FontWeight.Bold,
                     color = AppColors.primary
                 )
-                
+
                 if (isPurchasing) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Button(
-                        onClick = onPurchase,
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Buy")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = onDetails,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Details")
+                        }
+                        Button(
+                            onClick = onPurchase,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Buy")
+                        }
                     }
                 }
             }

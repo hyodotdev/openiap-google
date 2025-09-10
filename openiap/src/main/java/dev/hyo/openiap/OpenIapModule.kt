@@ -132,7 +132,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
         type: ProductRequest.ProductRequestType
     ): OpenIapPurchase? = withContext(Dispatchers.IO) {
         val activity = currentActivityRef?.get() ?: (context as? Activity)
-            ?: throw dev.hyo.openiap.helpers.OpenIapError.MissingCurrentActivity
+            ?: throw dev.hyo.openiap.OpenIapError.MissingCurrentActivity
         
         suspendCancellableCoroutine { continuation ->
             currentPurchaseCallback = { result ->
@@ -350,21 +350,17 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                 BillingClient.BillingResponseCode.USER_CANCELED -> {
                     Log.i(TAG, "User cancelled purchase flow")
                     currentPurchaseCallback?.invoke(
-                        Result.failure(dev.hyo.openiap.helpers.OpenIapError.UserCancelled)
+                        Result.failure(dev.hyo.openiap.OpenIapError.UserCancelled)
                     )
                 }
                 else -> {
-                    val code = OpenIapErrorCode.fromBillingResponseCode(billingResult.responseCode)
-                    val message = billingResult.debugMessage
-                        ?: when (code) {
-                            OpenIapErrorCode.E_ALREADY_OWNED -> "Item already owned"
-                            OpenIapErrorCode.E_ITEM_UNAVAILABLE -> "Item unavailable"
-                            OpenIapErrorCode.E_DEVELOPER_ERROR -> "Developer error"
-                            OpenIapErrorCode.E_SERVICE_UNAVAILABLE -> "Service unavailable"
-                            else -> "Purchase failed"
-                        }
-                    Log.w(TAG, "Purchase failed: code=${code.name} msg=$message")
-                    currentPurchaseCallback?.invoke(Result.failure(Exception(message)))
+                    val error = dev.hyo.openiap.OpenIapError.fromBillingResponseCode(
+                        billingResult.responseCode,
+                        billingResult.debugMessage
+                    )
+                    Log.w(TAG, "Purchase failed: code=${billingResult.responseCode} msg=${error.message}")
+                    // Surface framework-specific error upstream (maintains type for UserCancelled, etc.)
+                    currentPurchaseCallback?.invoke(Result.failure(error))
                 }
             }
         }

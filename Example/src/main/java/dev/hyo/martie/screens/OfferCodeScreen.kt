@@ -12,20 +12,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import dev.hyo.martie.models.AppColors
 import dev.hyo.martie.screens.uis.*
-import dev.hyo.martie.viewmodels.OpenIapStore
+import dev.hyo.openiap.IapContext
+import dev.hyo.openiap.store.OpenIapStore
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OfferCodeScreen(
     navController: NavController,
-    iapStore: OpenIapStore = viewModel()
+    storeParam: OpenIapStore? = null
 ) {
     val context = LocalContext.current
+    val iapStore = storeParam ?: (IapContext.LocalOpenIapStore.current
+        ?: IapContext.rememberOpenIapStore())
     val connectionStatus by iapStore.connectionStatus.collectAsState()
     
     var offerCode by remember { mutableStateOf("") }
@@ -37,7 +39,7 @@ fun OfferCodeScreen(
     val startupScope = rememberCoroutineScope()
     DisposableEffect(Unit) {
         startupScope.launch { runCatching { iapStore.initConnection() } }
-        onDispose { iapStore.disconnect() }
+        onDispose { startupScope.launch { runCatching { iapStore.endConnection() } } }
     }
     
     Scaffold(
