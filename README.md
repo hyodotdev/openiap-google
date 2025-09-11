@@ -10,6 +10,8 @@
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.hyochan.openiap/openiap-google)](https://central.sonatype.com/artifact/io.github.hyochan.openiap/openiap-google)
 [![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=21)
+[![Publish to Maven Central](https://github.com/hyodotdev/openiap-google/actions/workflows/publish.yml/badge.svg)](https://github.com/hyodotdev/openiap-google/actions/workflows/publish.yml)
+[![CI](https://github.com/hyodotdev/openiap-google/actions/workflows/ci.yml/badge.svg)](https://github.com/hyodotdev/openiap-google/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 OpenIAP Android module: https://www.openiap.dev/
@@ -251,7 +253,7 @@ data class OpenIapProduct(
 
 ```kotlin
 data class OpenIapPurchase(
-    val id: String,                  // purchaseToken on Android
+    val id: String,                  // transactionId
     val productId: String,
     val ids: List<String>?,          // alias of productIds
     val transactionDate: Double,
