@@ -14,7 +14,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "openiap-gms"
+rootProject.name = "openiap-google"
 
 include(":openiap")
 include(":Example")

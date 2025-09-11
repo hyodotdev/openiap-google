@@ -1,6 +1,6 @@
 # OpenIAP GMS
 
-[![Maven Central](https://img.shields.io/maven-central/v/dev.hyo.openiap/openiap-gms)](https://central.sonatype.com/artifact/dev.hyo.openiap/openiap-gms)
+[![Maven Central](https://img.shields.io/maven-central/v/dev.hyo.openiap/openiap-google)](https://central.sonatype.com/artifact/dev.hyo.openiap/openiap-google)
 [![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=21)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
@@ -34,7 +34,7 @@ Add to your module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("dev.hyo.openiap:openiap-gms:1.0.0")
+    implementation("dev.hyo.openiap:openiap-google:1.0.0")
 }
 ```
 
@@ -42,7 +42,7 @@ Or `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'dev.hyo.openiap:openiap-gms:1.0.0'
+    implementation 'dev.hyo.openiap:openiap-google:1.0.0'
 }
 ```
 
@@ -194,7 +194,7 @@ suspend fun getStorefront(): String
 ### Subscription Management
 
 ```kotlin
-suspend fun getActiveSubscriptions(subscriptionIds: List<String>? = null): List<ActiveSubscription>
+suspend fun getActiveSubscriptions(subscriptionIds: List<String>? = null): List<OpenIapActiveSubscription>
 suspend fun hasActiveSubscriptions(subscriptionIds: List<String>? = null): Boolean
 fun deepLinkToSubscriptions(): Boolean
 ```
@@ -293,8 +293,8 @@ sealed class OpenIapError : Exception {
 The library includes a comprehensive sample app demonstrating all features:
 
 ```bash
-git clone https://github.com/hyodotdev/openiap-gms.git
-cd openiap-gms
+git clone https://github.com/hyodotdev/openiap-google.git
+cd openiap-google
 ./gradlew :sample:installDebug
 ```
 
@@ -431,9 +431,9 @@ Contributions are welcome! Please read our contributing guidelines and submit pu
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/hyodotdev/openiap-gms/issues)
-- **Documentation**: [Wiki](https://github.com/hyodotdev/openiap-gms/wiki)  
-- **Discussions**: [GitHub Discussions](https://github.com/hyodotdev/openiap-gms/discussions)
+- **Issues**: [GitHub Issues](https://github.com/hyodotdev/openiap-google/issues)
+- **Documentation**: [Wiki](https://github.com/hyodotdev/openiap-google/wiki)  
+- **Discussions**: [GitHub Discussions](https://github.com/hyodotdev/openiap-google/discussions)
 
 ---
 
