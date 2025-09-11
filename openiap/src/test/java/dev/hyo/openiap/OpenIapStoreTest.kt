@@ -63,8 +63,6 @@ class OpenIapStoreTest {
 
         override suspend fun consumePurchaseAndroid(purchaseToken: String) {}
 
-        override suspend fun flushFailedPurchaseCachedAsPendingAndroid() {}
-
         override suspend fun deepLinkToSubscriptions(options: DeepLinkOptions) {
             lastDeepLinkOptions = options
         }
