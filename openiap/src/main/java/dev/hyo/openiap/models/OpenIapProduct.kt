@@ -31,6 +31,52 @@ data class OpenIapProduct(
                 values().find { it.value == value } ?: INAPP
         }
     }
+
+    fun toJSON(): Map<String, Any?> = mapOf(
+        // Common fields
+        "id" to id,
+        "title" to title,
+        "description" to description,
+        "type" to type.value,
+        "platform" to "android",
+
+        // Display / pricing
+        "displayName" to displayName,
+        "displayPrice" to displayPrice,
+        "currency" to currency,
+        "price" to price,
+        "debugDescription" to debugDescription,
+
+        // Android-specific
+        "nameAndroid" to nameAndroid,
+        "oneTimePurchaseOfferDetailsAndroid" to oneTimePurchaseOfferDetailsAndroid?.let {
+            mapOf(
+                "priceCurrencyCode" to it.priceCurrencyCode,
+                "formattedPrice" to it.formattedPrice,
+                "priceAmountMicros" to it.priceAmountMicros,
+            )
+        },
+        "subscriptionOfferDetailsAndroid" to subscriptionOfferDetailsAndroid?.map { offer ->
+            mapOf(
+                "basePlanId" to offer.basePlanId,
+                "offerId" to offer.offerId,
+                "offerToken" to offer.offerToken,
+                "offerTags" to offer.offerTags,
+                "pricingPhases" to mapOf(
+                    "pricingPhaseList" to offer.pricingPhases.pricingPhaseList.map { phase ->
+                        mapOf(
+                            "formattedPrice" to phase.formattedPrice,
+                            "priceCurrencyCode" to phase.priceCurrencyCode,
+                            "billingPeriod" to phase.billingPeriod,
+                            "billingCycleCount" to phase.billingCycleCount,
+                            "priceAmountMicros" to phase.priceAmountMicros,
+                            "recurrenceMode" to phase.recurrenceMode,
+                        )
+                    },
+                ),
+            )
+        },
+    )
 }
 
 /**

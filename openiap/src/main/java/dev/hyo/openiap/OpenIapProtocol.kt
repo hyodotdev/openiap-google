@@ -65,6 +65,11 @@ interface OpenIapProtocol {
         subscriptionIds: List<String>? = null
     ): Boolean
 
+    /**
+     * Get available purchases filtered by type (inapp or subs).
+     */
+    suspend fun getAvailableItems(type: dev.hyo.openiap.models.ProductRequest.ProductRequestType): List<OpenIapPurchase>
+
     // ============================================================================
     // Purchase Operations
     // ============================================================================
@@ -129,12 +134,6 @@ interface OpenIapProtocol {
      * @param purchaseToken Purchase token to consume
      */
     suspend fun consumePurchaseAndroid(purchaseToken: String)
-    
-    /**
-     * Clear failed purchases from cache (Android only).
-     * Clears any failed purchases that are cached as pending.
-     */
-    suspend fun flushFailedPurchaseCachedAsPendingAndroid()
 
     // ============================================================================
     // Subscription Management / UX helpers
@@ -144,6 +143,12 @@ interface OpenIapProtocol {
      * Open native subscription management interface (Android deep link).
      */
     suspend fun deepLinkToSubscriptions(options: DeepLinkOptions)
+
+    /**
+     * Get storefront country code from Google Play Billing config.
+     * Returns empty string on failure.
+     */
+    suspend fun getStorefront(): String
 
     // ============================================================================
     // Event Listeners (align with event-based request semantics)

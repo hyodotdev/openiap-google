@@ -1,6 +1,7 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.vanniktech.maven.publish")
 }
 
@@ -16,7 +17,6 @@ android {
 
     defaultConfig {
         minSdk = 21
-        targetSdk = 34
         
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -33,22 +33,17 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     // Enable Compose for composables in this library (IapContext)
     buildFeatures {
         compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion =
-            (project.findProperty("COMPOSE_COMPILER_VERSION") as String?) ?: "1.5.14"
     }
 }
 
@@ -56,8 +51,8 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     
-    // Google Play Billing Library
-    api("com.android.billingclient:billing-ktx:6.0.1")
+    // Google Play Billing Library (align with app/lib v8)
+    api("com.android.billingclient:billing-ktx:8.0.0")
     
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")

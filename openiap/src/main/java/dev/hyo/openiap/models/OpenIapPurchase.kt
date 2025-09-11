@@ -49,4 +49,25 @@ data class OpenIapPurchase(
             }
         }
     }
+
+    fun toJSON(): Map<String, Any?> = mapOf(
+        // Common
+        "id" to id,
+        "productId" to productId,
+        "ids" to ids,
+        "transactionId" to transactionId,
+        "transactionDate" to transactionDate.toDouble(),
+        "transactionReceipt" to transactionReceipt,
+        "purchaseToken" to purchaseToken,
+        "platform" to "android",
+
+        // Android-specific
+        "purchaseTokenAndroid" to purchaseTokenAndroid,
+        "dataAndroid" to dataAndroid,
+        "signatureAndroid" to signatureAndroid,
+        "autoRenewingAndroid" to autoRenewingAndroid,
+        "isAcknowledgedAndroid" to isAcknowledgedAndroid,
+        "packageNameAndroid" to packageNameAndroid,
+        "developerPayloadAndroid" to developerPayloadAndroid,
+    )
 }

@@ -9,6 +9,12 @@ sealed class OpenIapError : Exception() {
     abstract val code: String
     abstract override val message: String
 
+    fun toJSON(): Map<String, Any?> = mapOf(
+        "code" to toCode(this),
+        "message" to (this.message ?: ""),
+        "platform" to "android",
+    )
+
     data class ProductNotFound(val productId: String) : OpenIapError() {
         override val code = "PRODUCT_NOT_FOUND"
         override val message = "Product not found: $productId"
