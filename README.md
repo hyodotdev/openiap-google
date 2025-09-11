@@ -1,10 +1,24 @@
-# OpenIAP GMS
+# OpenIAP Android
+
+<div align="center">
+  <img src="https://openiap.dev/logo.png" alt="OpenIAP Logo" width="120" height="120">
+  
+  <p><strong>Android implementation of the <a href="https://www.openiap.dev/">OpenIAP</a> specification using Google Play Billing.</strong></p>
+</div>
+
+<br />
 
 [![Maven Central](https://img.shields.io/maven-central/v/dev.hyo.openiap/openiap-google)](https://central.sonatype.com/artifact/dev.hyo.openiap/openiap-google)
 [![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=21)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
+OpenIAP Android module: https://www.openiap.dev/
+
 Modern Android Kotlin library for in-app purchases using Google Play Billing Library v8.
+
+## 🌐 Learn More
+
+Visit [**openiap.dev**](https://openiap.dev) for complete documentation, guides, and the full OpenIAP specification.
 
 ## 🎯 Overview
 
@@ -16,7 +30,7 @@ OpenIAP GMS is a modern, type-safe Kotlin library that simplifies Google Play in
 - ⚡ **Kotlin Coroutines** - Modern async/await API
 - 🎯 **Type Safe** - Full Kotlin type safety with sealed classes
 - 🔄 **Real-time Events** - Purchase update and error listeners
-- 🧵 **Thread Safe** - Concurrent operations with proper synchronization  
+- 🧵 **Thread Safe** - Concurrent operations with proper synchronization
 - 📱 **Easy Integration** - Simple singleton pattern with context management
 - 🛡️ **Robust Error Handling** - Comprehensive error types with detailed messages
 - 🚀 **Production Ready** - Used in production apps
@@ -67,18 +81,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         openIAP = OpenIAP.getInstance()
-        
+
         // Set up listeners
         openIAP.addPurchaseUpdateListener { purchase ->
             handlePurchaseUpdate(purchase)
         }
-        
+
         openIAP.addPurchaseErrorListener { error ->
             handlePurchaseError(error)
         }
-        
+
         // Initialize connection
         lifecycleScope.launch {
             try {
@@ -175,9 +189,7 @@ suspend fun requestPurchase(
 )
 
 suspend fun requestPurchase(params: Map<String, Any?>, activity: Activity)
-
 suspend fun finishTransaction(purchase: OpenIapPurchase, isConsumable: Boolean? = null)
-
 suspend fun getAvailablePurchases(): List<OpenIapPurchase>
 suspend fun getAvailablePurchases(options: Map<String, Any?>?): List<OpenIapPurchase> // options ignored on Android
 suspend fun getAvailableItemsByType(type: String): List<OpenIapPurchase>
@@ -273,7 +285,7 @@ sealed class OpenIapError : Exception {
 
 ## 🔄 Purchase Flow
 
-1. **Initialize**: Call `initConnection()` 
+1. **Initialize**: Call `initConnection()`
 2. **Fetch Products**: Use `fetchProducts()` to load available items
 3. **Request Purchase**: Call `requestPurchase()` with the product SKU
 4. **Handle Events**: Listen for purchase updates via listeners
@@ -301,8 +313,9 @@ cd openiap-google
 ### Test Products
 
 For development, use Google Play's test SKUs:
+
 - `android.test.purchased` - Always succeeds
-- `android.test.canceled` - Always cancels  
+- `android.test.canceled` - Always cancels
 - `android.test.item_unavailable` - Always fails
 
 For production testing, configure products in Google Play Console and use internal testing.
@@ -310,6 +323,7 @@ For production testing, configure products in Google Play Console and use intern
 ## 📱 Sample App
 
 The included sample app demonstrates:
+
 - ✅ Connection management with retry logic
 - ✅ Product listing and purchase flow
 - ✅ Real-time purchase event handling
@@ -374,11 +388,13 @@ openIAP.requestPurchase(
 ### Common Issues
 
 1. **Product not found**
+
    - Ensure products are configured in Google Play Console
    - App must be uploaded to Google Play Console (even as draft)
    - Wait up to 24 hours for products to become available
 
 2. **Billing unavailable**
+
    - Verify Google Play Services are installed and updated
    - Check that app is signed with release key for testing
    - Ensure billing permissions are in AndroidManifest.xml
@@ -404,7 +420,7 @@ if (BuildConfig.DEBUG) {
 ```
 MIT License
 
-Copyright (c) 2024 hyodo.dev
+Copyright (c) 2024 hyo.dev
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -432,9 +448,11 @@ Contributions are welcome! Please read our contributing guidelines and submit pu
 ## 📞 Support
 
 - **Issues**: [GitHub Issues](https://github.com/hyodotdev/openiap-google/issues)
-- **Documentation**: [Wiki](https://github.com/hyodotdev/openiap-google/wiki)  
-- **Discussions**: [GitHub Discussions](https://github.com/hyodotdev/openiap-google/discussions)
+- **Discussions**: [GitHub Discussions](https://github.com/hyodotdev/openiap.dev/discussions)
 
 ---
 
-Made with ❤️ by [hyodo.dev](https://hyodo.dev)
+<div align="center">
+  <strong>Built with ❤️ for the OpenIAP community</strong>
+  
+</div>
