@@ -38,6 +38,8 @@ class OpenIapStoreTest {
 
         override suspend fun getAvailablePurchases(options: PurchaseOptions?): List<OpenIapPurchase> = purchasesToReturn
 
+        override suspend fun getAvailableItems(type: ProductRequest.ProductRequestType): List<OpenIapPurchase> = purchasesToReturn
+
         override suspend fun getActiveSubscriptions(subscriptionIds: List<String>?): List<OpenIapActiveSubscription> = activeSubsToReturn
 
         override suspend fun hasActiveSubscriptions(subscriptionIds: List<String>?): Boolean = activeSubsToReturn.isNotEmpty()
@@ -66,6 +68,8 @@ class OpenIapStoreTest {
         override suspend fun deepLinkToSubscriptions(options: DeepLinkOptions) {
             lastDeepLinkOptions = options
         }
+
+        override suspend fun getStorefront(): String = ""
 
         override fun addPurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener) {
             updateListeners.add(listener)
@@ -171,4 +175,3 @@ class OpenIapStoreTest {
         assertEquals("sku.sub", result.first().productId)
     }
 }
-
