@@ -8,7 +8,7 @@
 
 <br />
 
-[![Maven Central](https://img.shields.io/maven-central/v/dev.hyo.openiap/openiap-google)](https://central.sonatype.com/artifact/dev.hyo.openiap/openiap-google)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.hyochan.openiap/openiap-google)](https://central.sonatype.com/artifact/io.github.hyochan.openiap/openiap-google)
 [![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=21)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
@@ -48,7 +48,7 @@ Add to your module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("dev.hyo.openiap:openiap-google:1.0.0")
+    implementation("io.github.hyochan.openiap:openiap-google:1.0.0")
 }
 ```
 
@@ -56,7 +56,7 @@ Or `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'dev.hyo.openiap:openiap-google:1.0.0'
+    implementation 'io.github.hyochan.openiap:openiap-google:1.0.0'
 }
 ```
 
@@ -448,7 +448,7 @@ Contributions are welcome! Please read our contributing guidelines and submit pu
 ## 📞 Support
 
 - **Issues**: [GitHub Issues](https://github.com/hyodotdev/openiap-google/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/hyodotdev/openiap.dev/discussions)
+- **Discussions**: [OpenIAP Discussions](https://github.com/hyodotdev/openiap.dev/discussions)
 
 ---
 

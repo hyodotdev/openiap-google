@@ -49,3 +49,4 @@ coverage/
 tmp/
 temp/
 .gradle/
+gpg_key_content.gpg

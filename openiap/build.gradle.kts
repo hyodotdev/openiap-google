@@ -1,7 +1,7 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    id("maven-publish")
+    id("com.vanniktech.maven.publish")
 }
 
 // Resolve version from either 'openIapVersion' or 'OPENIAP_VERSION' or fallback
@@ -11,7 +11,7 @@ val openIapVersion: String =
         ?: "1.0.0").toString()
 
 android {
-    namespace = "dev.hyo.openiap"
+    namespace = "io.github.hyochan.openiap"
     compileSdk = 34
 
     defaultConfig {
@@ -50,13 +50,6 @@ android {
         kotlinCompilerExtensionVersion =
             (project.findProperty("COMPOSE_COMPILER_VERSION") as String?) ?: "1.5.14"
     }
-
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-            withJavadocJar()
-        }
-    }
 }
 
 dependencies {
@@ -87,42 +80,36 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }
 
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            groupId = project.findProperty("OPENIAP_GROUP_ID")?.toString() ?: "dev.hyo.openiap"
-            artifactId = "openiap-google"
-            version = openIapVersion
+// Configure Vanniktech Maven Publish
+mavenPublishing {
+    val groupId = project.findProperty("OPENIAP_GROUP_ID")?.toString() ?: "io.github.hyochan.openiap"
+    coordinates(groupId, "openiap-google", openIapVersion)
 
-            afterEvaluate {
-                from(components["release"])
-            }
+    // Use the new Central Portal publishing which avoids Nexus staging profile lookups.
+    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
 
-            pom {
-                name.set("OpenIAP GMS")
-                description.set("OpenIAP Android library using Google Play Billing v8")
-                url.set("https://github.com/hyodotdev/openiap-google")
-                
-                licenses {
-                    license {
-                        name.set("MIT License")
-                        url.set("https://opensource.org/licenses/MIT")
-                    }
-                }
-                
-                developers {
-                    developer {
-                        id.set("hyodo-dev")
-                        name.set("hyodo.dev")
-                    }
-                }
-                
-                scm {
-                    connection.set("scm:git:git://github.com/hyodotdev/openiap-google.git")
-                    developerConnection.set("scm:git:ssh://git@github.com/hyodotdev/openiap-google.git")
-                    url.set("https://github.com/hyodotdev/openiap-google")
-                }
+    pom {
+        name.set("OpenIAP GMS")
+        description.set("OpenIAP Android library using Google Play Billing v8")
+        url.set("https://github.com/hyodotdev/openiap-google")
+
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://opensource.org/licenses/MIT")
             }
+        }
+        developers {
+            developer {
+                id.set("hyochan")
+                name.set("hyochan")
+            }
+        }
+        scm {
+            connection.set("scm:git:git://github.com/hyodotdev/openiap-google.git")
+            developerConnection.set("scm:git:ssh://git@github.com/hyodotdev/openiap-google.git")
+            url.set("https://github.com/hyodotdev/openiap-google")
         }
     }
 }

@@ -2,7 +2,12 @@ plugins {
     id("com.android.library") version "8.5.0" apply false
     id("com.android.application") version "8.5.0" apply false
     id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+    id("com.vanniktech.maven.publish") version "0.29.0" apply false
 }
+
+// Configure Sonatype (OSSRH) publishing at the root
+// Credentials are sourced from env or gradle.properties (OSSRH_USERNAME/OSSRH_PASSWORD)
+// Maven Central publishing is configured per-module via Vanniktech plugin.
 
 tasks.register("clean", Delete::class) {
     delete(rootProject.layout.buildDirectory)
