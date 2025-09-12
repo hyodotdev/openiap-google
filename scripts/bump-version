@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# bump-version: bump or set project version and sync files
+# Usage:
+#   scripts/bump-version [major|minor|patch|<x.y.z>] [--no-readme] [--no-gradle] [--commit]
+# Examples:
+#   scripts/bump-version patch
+#   scripts/bump-version 1.2.3 --commit
+
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+VERSION_FILE="$ROOT_DIR/VERSION"
+GRADLE_PROPS="$ROOT_DIR/gradle.properties"
+README="$ROOT_DIR/README.md"
+
+msg() { echo "[bump-version] $*"; }
+die() { echo "[bump-version] error: $*" >&2; exit 1; }
+
+current_version() {
+  if [[ -f "$VERSION_FILE" ]]; then
+    head -n1 "$VERSION_FILE" | tr -d '\r' | tr -d ' '\
+      || true
+    return
+  fi
+  if [[ -f "$GRADLE_PROPS" ]]; then
+    awk -F= '/^OPENIAP_VERSION=/{print $2; found=1} END{if(!found) exit 1}' "$GRADLE_PROPS" 2>/dev/null || true
+    return
+  fi
+  echo "0.1.0"
+}
+
+is_semver() {
+  [[ ${1:-} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+}
+
+increment() {
+  local ver=$1 part=$2
+  IFS='.' read -r major minor patch <<<"$ver"
+  case "$part" in
+    major) ((major+=1)); minor=0; patch=0 ;;
+    minor) ((minor+=1)); patch=0 ;;
+    patch) ((patch+=1)) ;;
+    *) die "unknown increment part: $part" ;;
+  esac
+  echo "$major.$minor.$patch"
+}
+
+update_gradle() {
+  local newv=$1
+  if [[ -f "$GRADLE_PROPS" ]]; then
+    if grep -qE '^OPENIAP_VERSION=' "$GRADLE_PROPS"; then
+      perl -0777 -pi -e 's/^OPENIAP_VERSION=.*/OPENIAP_VERSION='"$newv"'/m' "$GRADLE_PROPS"
+    else
+      printf '\nOPENIAP_VERSION=%s\n' "$newv" >> "$GRADLE_PROPS"
+    fi
+    msg "updated gradle.properties to $newv"
+  else
+    msg "gradle.properties not found; skipping"
+  fi
+}
+
+update_readme() {
+  local newv=$1
+  if [[ -f "$README" ]]; then
+    # Replace any openiap-google:<x.y.z> occurrences
+    perl -0777 -pi -e 's/(openiap-google:)\d+\.\d+\.\d+/$1'"$newv"'/g' "$README"
+    msg "updated README.md to $newv"
+  else
+    msg "README.md not found; skipping"
+  fi
+}
+
+commit_changes() {
+  local newv=$1
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git add "$VERSION_FILE" "$GRADLE_PROPS" "$README" 2>/dev/null || true
+    git commit -m "chore(version): bump to $newv" || msg "nothing to commit"
+  else
+    msg "not a git repo; skip commit"
+  fi
+}
+
+main() {
+  local do_readme=1 do_gradle=1 do_commit=0
+  local target=${1:-}
+  shift || true
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --no-readme) do_readme=0 ;;
+      --no-gradle) do_gradle=0 ;;
+      --commit) do_commit=1 ;;
+      -h|--help)
+        cat <<EOF
+Usage: scripts/bump-version [major|minor|patch|<x.y.z>] [--no-readme] [--no-gradle] [--commit]
+EOF
+        exit 0 ;;
+      *) die "unknown option: $1" ;;
+    esac
+    shift
+  done
+
+  [[ -n "$target" ]] || die "missing target version or bump type"
+
+  local curr newv
+  curr=$(current_version)
+  [[ -n "$curr" ]] || curr="0.1.0"
+
+  case "$target" in
+    major|minor|patch) newv=$(increment "$curr" "$target") ;;
+    *)
+      is_semver "$target" || die "invalid version: $target (expected x.y.z or bump type)"
+      newv="$target" ;;
+  esac
+
+  echo "$newv" > "$VERSION_FILE"
+  msg "wrote VERSION $newv (from $curr)"
+
+  (( do_gradle )) && update_gradle "$newv"
+  (( do_readme )) && update_readme "$newv"
+  (( do_commit )) && commit_changes "$newv"
+
+  msg "done. new version: $newv"
+}
+
+main "$@"
+

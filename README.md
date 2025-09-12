@@ -1,7 +1,7 @@
 # OpenIAP Android
 
 <div align="center">
-  <img src="https://openiap.dev/logo.png" alt="OpenIAP Logo" width="120" height="120">
+  <img src="./logo.png" alt="OpenIAP Google Logo" width="120" height="120">
   
   <p><strong>Android implementation of the <a href="https://www.openiap.dev/">OpenIAP</a> specification using Google Play Billing.</strong></p>
 </div>
@@ -13,8 +13,6 @@
 [![Publish to Maven Central](https://github.com/hyodotdev/openiap-google/actions/workflows/publish.yml/badge.svg)](https://github.com/hyodotdev/openiap-google/actions/workflows/publish.yml)
 [![CI](https://github.com/hyodotdev/openiap-google/actions/workflows/ci.yml/badge.svg)](https://github.com/hyodotdev/openiap-google/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-
-OpenIAP Android module: https://www.openiap.dev/
 
 Modern Android Kotlin library for in-app purchases using Google Play Billing Library v8.
 
@@ -50,7 +48,7 @@ Add to your module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("io.github.hyochan.openiap:openiap-google:1.0.0")
+    implementation("io.github.hyochan.openiap:openiap-google:1.0.2")
 }
 ```
 
@@ -58,7 +56,7 @@ Or `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'io.github.hyochan.openiap:openiap-google:1.0.0'
+    implementation 'io.github.hyochan.openiap:openiap-google:1.0.2'
 }
 ```
 
@@ -419,10 +417,10 @@ if (BuildConfig.DEBUG) {
 
 ## 📄 License
 
-```
+```txt
 MIT License
 
-Copyright (c) 2024 hyo.dev
+Copyright (c) 2025 hyo.dev
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

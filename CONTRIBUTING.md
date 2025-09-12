@@ -97,14 +97,46 @@ Keep them clear and concise:
 - `Update Google Play Billing integration`
 - `Refactor transaction handling`
 
+## Version Management
+
+This repo uses a single source of truth for the library version via a `VERSION` file, and provides a helper script to keep related files in sync.
+
+- Version source: `VERSION` (root)
+- Gradle property: `OPENIAP_VERSION` in `gradle.properties` (kept in sync)
+- Docs: dependency snippets in `README.md` (kept in sync)
+
+Update the version using the provided script:
+
+```bash
+# Bump by type
+scripts/bump-version patch   # or: minor | major
+
+# Or set an explicit version
+scripts/bump-version 1.2.3
+
+# Optional flags
+scripts/bump-version patch --no-readme   # skip README sync
+scripts/bump-version patch --no-gradle   # skip Gradle sync
+scripts/bump-version patch --commit      # auto-commit the changes
+```
+
+What the script does:
+- Writes the new value to `VERSION`
+- Updates `OPENIAP_VERSION` in `gradle.properties` (if present)
+- Replaces version strings in `README.md` dependency snippets
+- Optionally creates a commit when `--commit` is used
+
+Note: Creating remote tags is optional here; keep the `VERSION` file and README in sync. Tagging can be done separately during release if needed.
+
 ## Release Process (Maintainers Only)
 
 When a PR is merged, maintainers handle releases using semantic versioning (major.minor.patch):
 
-1. Bump version (e.g., `OPENIAP_VERSION` in `gradle.properties` or release property)
-2. Update changelog (if applicable)
-3. Tag and create a GitHub Release
-4. Publish to Maven Central via CI (or `./gradlew publish` if configured)
+1. Bump version via `scripts/bump-version <major|minor|patch|x.y.z>`
+2. Ensure README snippets reflect the new version (script does this)
+3. Update changelog (if applicable)
+4. Optionally tag and create a GitHub Release
+5. Publish to Maven Central via CI (or `./gradlew publish` if configured)
 
 Availability: artifacts appear on Maven Central shortly after the release propagates.
 
@@ -119,4 +151,3 @@ Feel free to:
 ## License
 
 By contributing, you agree that your contributions will be licensed under the MIT License.
-
