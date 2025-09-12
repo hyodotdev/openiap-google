@@ -150,33 +150,44 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                 return@suspendCancellableCoroutine
             }
 
-            // Prefer cached details if available
-            val cachedDetails = request.skus
-                .mapNotNull { sku -> productManager.get(sku) }
-                .firstOrNull { it.productType == desiredType }
+            // Validate SKU list
+            if (request.skus.isEmpty()) {
+                val err = OpenIapError.EmptySkuList
+                purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
+                currentPurchaseCallback?.invoke(Result.success(emptyList()))
+                return@suspendCancellableCoroutine
+            }
 
-            val useDetails: (ProductDetails) -> Unit = details@{ productDetails ->
-                Log.d(TAG, "Using ProductDetails: sku=${productDetails.productId}, title=${productDetails.title}, type=$type")
-                val pdParamsBuilder = BillingFlowParams.ProductDetailsParams.newBuilder()
-                    .setProductDetails(productDetails)
-                if (type == ProductRequest.ProductRequestType.SUBS) {
-                    val offerToken = productDetails.subscriptionOfferDetails
-                        ?.firstOrNull()
-                        ?.offerToken
-                    if (offerToken.isNullOrEmpty()) {
-                        Log.w(TAG, "No subscription offer available for ${request.skus}")
-                        val err = OpenIapError.SkuOfferMismatch
-                        purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
-                        currentPurchaseCallback?.invoke(Result.success(emptyList()))
-                        return@details
+            // Resolve details from cache first
+            val detailsBySku = mutableMapOf<String, ProductDetails>()
+            request.skus.forEach { sku ->
+                val d = productManager.get(sku)
+                if (d != null && d.productType == desiredType) detailsBySku[sku] = d
+            }
+            val missingSkus = request.skus.filter { !detailsBySku.containsKey(it) }
+
+            fun launchBillingWith(detailsList: List<ProductDetails>) {
+                // Build params for all requested SKUs in order
+                val paramsList = mutableListOf<BillingFlowParams.ProductDetailsParams>()
+                for (pd in detailsList) {
+                    val builder = BillingFlowParams.ProductDetailsParams.newBuilder()
+                        .setProductDetails(pd)
+                    if (type == ProductRequest.ProductRequestType.SUBS) {
+                        val offerToken = pd.subscriptionOfferDetails?.firstOrNull()?.offerToken
+                        if (offerToken.isNullOrEmpty()) {
+                            Log.w(TAG, "No subscription offer available for ${pd.productId}")
+                            val err = OpenIapError.SkuOfferMismatch
+                            purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
+                            currentPurchaseCallback?.invoke(Result.success(emptyList()))
+                            return
+                        }
+                        builder.setOfferToken(offerToken)
                     }
-                    Log.d(TAG, "Using offerToken=$offerToken for SUBS purchase")
-                    pdParamsBuilder.setOfferToken(offerToken)
+                    paramsList.add(builder.build())
                 }
-                val productDetailsParamsList = listOf(pdParamsBuilder.build())
 
                 val billingFlowParams = BillingFlowParams.newBuilder()
-                    .setProductDetailsParamsList(productDetailsParamsList)
+                    .setProductDetailsParamsList(paramsList)
                     .setIsOfferPersonalized(request.isOfferPersonalized == true)
                     .apply {
                         request.obfuscatedAccountIdAndroid?.let { setObfuscatedAccountId(it) }
@@ -193,11 +204,19 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                 }
             }
 
-            if (cachedDetails != null) {
-                useDetails(cachedDetails)
+            if (missingSkus.isEmpty()) {
+                val ordered = request.skus.mapNotNull { detailsBySku[it] }
+                if (ordered.size != request.skus.size) {
+                    val missing = request.skus.firstOrNull { !detailsBySku.containsKey(it) }
+                    val err = OpenIapError.SkuNotFound(missing ?: "")
+                    purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
+                    currentPurchaseCallback?.invoke(Result.success(emptyList()))
+                    return@suspendCancellableCoroutine
+                }
+                launchBillingWith(ordered)
             } else {
-                // Query product details, update cache, then launch flow
-                val productList = request.skus.map { sku ->
+                // Query missing, update cache and then launch
+                val productList = missingSkus.map { sku ->
                     QueryProductDetailsParams.Product.newBuilder()
                         .setProductId(sku)
                         .setProductType(desiredType)
@@ -212,11 +231,18 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                     if (billingResult.responseCode == BillingClient.BillingResponseCode.OK &&
                         productDetailsList != null && productDetailsList.isNotEmpty()
                     ) {
-                        // Update cache
                         productManager.putAll(productDetailsList)
-                        val productDetails = productDetailsList.first()
-                        useDetails(productDetails)
-                        // Do not complete here; wait for onPurchasesUpdated to resolve the result
+                        productDetailsList.forEach { detailsBySku[it.productId] = it }
+                        val ordered = request.skus.mapNotNull { detailsBySku[it] }
+                        if (ordered.size != request.skus.size) {
+                            val missing = request.skus.firstOrNull { !detailsBySku.containsKey(it) }
+                            val err = OpenIapError.SkuNotFound(missing ?: "")
+                            purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
+                            currentPurchaseCallback?.invoke(Result.success(emptyList()))
+                            return@queryProductDetailsAsync
+                        }
+                        launchBillingWith(ordered)
+                        // Do not complete here; wait for onPurchasesUpdated
                     } else {
                         Log.w(TAG, "queryProductDetails failed: code=${billingResult.responseCode} msg=${billingResult.debugMessage}")
                         val err = OpenIapError.QueryProduct(billingResult.debugMessage ?: "Product not found: ${request.skus}")
