@@ -62,8 +62,8 @@ update_gradle() {
 update_readme() {
   local newv=$1
   if [[ -f "$README" ]]; then
-    # Replace any openiap-google:<x.y.z> occurrences
-    perl -0777 -pi -e 's/(openiap-google:)\d+\.\d+\.\d+/$1'"$newv"'/g' "$README"
+    # Replace any openiap-google:<x.y.z> occurrences (use ${1} to avoid $11 confusion)
+    perl -0777 -pi -e 's/(openiap-google:)\d+\.\d+\.\d+/${1}'"$newv"'/g' "$README"
     msg "updated README.md to $newv"
   else
     msg "README.md not found; skipping"
@@ -123,4 +123,3 @@ EOF
 }
 
 main "$@"
-

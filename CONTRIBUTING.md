@@ -108,19 +108,22 @@ This repo uses a single source of truth for the library version via a `VERSION` 
 Update the version using the provided script:
 
 ```bash
-# Bump by type
-scripts/bump-version patch   # or: minor | major
+# Bump by type (three common modes)
+./scripts/bump-version.sh patch  # for bug fixes
+./scripts/bump-version.sh minor  # for new features
+./scripts/bump-version.sh major  # for breaking
 
 # Or set an explicit version
-scripts/bump-version 1.2.3
+./scripts/bump-version.sh 1.2.3
 
 # Optional flags
-scripts/bump-version patch --no-readme   # skip README sync
-scripts/bump-version patch --no-gradle   # skip Gradle sync
-scripts/bump-version patch --commit      # auto-commit the changes
+./scripts/bump-version.sh patch --no-readme   # skip README sync
+./scripts/bump-version.sh patch --no-gradle   # skip Gradle sync
+./scripts/bump-version.sh patch --commit      # auto-commit the changes
 ```
 
 What the script does:
+
 - Writes the new value to `VERSION`
 - Updates `OPENIAP_VERSION` in `gradle.properties` (if present)
 - Replaces version strings in `README.md` dependency snippets
