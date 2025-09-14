@@ -33,8 +33,15 @@ fun AvailablePurchasesScreen(
     storeParam: OpenIapStore? = null
 ) {
     val context = LocalContext.current
+    val appContext = context.applicationContext
     val iapStore = storeParam ?: (IapContext.LocalOpenIapStore.current
-        ?: IapContext.rememberOpenIapStore())
+        ?: remember(appContext) {
+            val storeKey = dev.hyo.martie.BuildConfig.OPENIAP_STORE
+            val appId = dev.hyo.martie.BuildConfig.HORIZON_APP_ID
+            android.util.Log.i("OpenIapFactory", "example-create storeKey=${storeKey} appIdSet=${appId.isNotEmpty()}")
+            runCatching { OpenIapStore(appContext, storeKey, appId) }
+                .getOrElse { OpenIapStore(appContext, "auto", appId) }
+        })
     val purchases by iapStore.availablePurchases.collectAsState()
     val status by iapStore.status.collectAsState()
     val connectionStatus by iapStore.connectionStatus.collectAsState()

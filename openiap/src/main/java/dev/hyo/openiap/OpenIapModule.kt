@@ -3,7 +3,7 @@ package dev.hyo.openiap
 import android.app.Activity
 import android.content.Context
 import java.lang.ref.WeakReference
-import android.util.Log
+import dev.hyo.openiap.OpenIapLog
 import com.google.gson.Gson
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
@@ -35,7 +35,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
     private val productManager = ProductManager()
     
     init {
-        Log.d(TAG, "Initializing BillingClient")
+        OpenIapLog.d("Initializing BillingClient", TAG)
         billingClient = BillingClient
             .newBuilder(context)
             .setListener(this)
@@ -175,7 +175,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                     if (type == ProductRequest.ProductRequestType.SUBS) {
                         val offerToken = pd.subscriptionOfferDetails?.firstOrNull()?.offerToken
                         if (offerToken.isNullOrEmpty()) {
-                            Log.w(TAG, "No subscription offer available for ${pd.productId}")
+                            OpenIapLog.w("No subscription offer available for ${pd.productId}", TAG)
                             val err = OpenIapError.SkuOfferMismatch
                             purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
                             currentPurchaseCallback?.invoke(Result.success(emptyList()))
@@ -196,7 +196,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                     .build()
 
                 val flowResult = client.launchBillingFlow(activity, billingFlowParams)
-                Log.d(TAG, "launchBillingFlow result=${flowResult.responseCode} msg=${flowResult.debugMessage}")
+                OpenIapLog.d("launchBillingFlow result=${flowResult.responseCode} msg=${flowResult.debugMessage}", TAG)
                 if (flowResult.responseCode != BillingClient.BillingResponseCode.OK) {
                     val err = OpenIapError.PurchaseFailed()
                     purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
@@ -244,7 +244,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                         launchBillingWith(ordered)
                         // Do not complete here; wait for onPurchasesUpdated
                     } else {
-                        Log.w(TAG, "queryProductDetails failed: code=${billingResult.responseCode} msg=${billingResult.debugMessage}")
+                        OpenIapLog.w("queryProductDetails failed: code=${billingResult.responseCode} msg=${billingResult.debugMessage}", TAG)
                         val err = OpenIapError.QueryProduct()
                         purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
                         currentPurchaseCallback?.invoke(Result.success(emptyList()))
@@ -266,7 +266,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                 
                 suspendCancellableCoroutine { continuation ->
                     billingClient?.consumeAsync(consumeParams) { billingResult, _ ->
-                        Log.d(TAG, "consumeAsync: code=${billingResult.responseCode} msg=${billingResult.debugMessage}")
+                        OpenIapLog.d("consumeAsync: code=${billingResult.responseCode} msg=${billingResult.debugMessage}", TAG)
                         continuation.resume(
                             PurchaseResult(
                                 responseCode = billingResult.responseCode,
@@ -289,7 +289,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                 
                 suspendCancellableCoroutine { continuation ->
                     billingClient?.acknowledgePurchase(acknowledgePurchaseParams) { billingResult ->
-                        Log.d(TAG, "acknowledgePurchase: code=${billingResult.responseCode} msg=${billingResult.debugMessage}")
+                        OpenIapLog.d("acknowledgePurchase: code=${billingResult.responseCode} msg=${billingResult.debugMessage}", TAG)
                         continuation.resume(
                             PurchaseResult(
                                 responseCode = billingResult.responseCode,
@@ -363,9 +363,9 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
     // ============================================================================
     
     override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {
-        Log.d(TAG, "onPurchasesUpdated: code=${billingResult.responseCode} msg=${billingResult.debugMessage} count=${purchases?.size ?: 0}")
+        OpenIapLog.d("onPurchasesUpdated: code=${billingResult.responseCode} msg=${billingResult.debugMessage} count=${purchases?.size ?: 0}", TAG)
         purchases?.forEachIndexed { index, p ->
-            Log.d(TAG, "[Purchase $index] token=${p.purchaseToken} orderId=${p.orderId} state=${p.purchaseState} autoRenew=${p.isAutoRenewing} acknowledged=${p.isAcknowledged} products=${p.products} originalJson=${p.originalJson}")
+            OpenIapLog.d("[Purchase $index] token=${p.purchaseToken} orderId=${p.orderId} state=${p.purchaseState} autoRenew=${p.isAutoRenewing} acknowledged=${p.isAcknowledged} products=${p.products} originalJson=${p.originalJson}", TAG)
         }
         if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
             val mapped = purchases.map { p ->
@@ -374,7 +374,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                     if (p.products.any { it.contains("subs") }) BillingClient.ProductType.SUBS else BillingClient.ProductType.INAPP
                 )
             }
-            Log.d(TAG, "Mapped OpenIapPurchases=${gson.toJson(mapped)}")
+            OpenIapLog.d("Mapped OpenIapPurchases=${gson.toJson(mapped)}", TAG)
             // Broadcast each event to listeners
             mapped.forEach { openIapPurchase ->
                 purchaseUpdateListeners.forEach { listener ->
@@ -385,7 +385,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
         } else {
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.USER_CANCELED -> {
-                    Log.i(TAG, "User cancelled purchase flow")
+                    OpenIapLog.i("User cancelled purchase flow", TAG)
                     val err = dev.hyo.openiap.OpenIapError.UserCancelled
                     purchaseErrorListeners.forEach { listener ->
                         runCatching { listener.onPurchaseError(err) }
@@ -397,7 +397,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                         billingResult.responseCode,
                         billingResult.debugMessage
                     )
-                    Log.w(TAG, "Purchase failed: code=${billingResult.responseCode} msg=${error.message}")
+                    OpenIapLog.w("Purchase failed: code=${billingResult.responseCode} msg=${error.message}", TAG)
                     // Surface framework-specific error upstream (maintains type for UserCancelled, etc.)
                     purchaseErrorListeners.forEach { listener ->
                         runCatching { listener.onPurchaseError(error) }
@@ -547,7 +547,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                 .getInstance()
                 .isGooglePlayServicesAvailable(context) != ConnectionResult.SUCCESS
         ) {
-            Log.i(TAG, "Google Play Services are not available on this device")
+            OpenIapLog.i("Google Play Services are not available on this device", TAG)
             onFailure(IllegalStateException("Google Play Services are not available on this device"))
             return
         }
@@ -569,10 +569,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
             object : BillingClientStateListener {
                 override fun onBillingSetupFinished(billingResult: BillingResult) {
                     if (billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
-                        Log.w(
-                            TAG,
-                            "Billing setup finished with error: ${billingResult.debugMessage}",
-                        )
+                        OpenIapLog.w("Billing setup finished with error: ${billingResult.debugMessage}", TAG)
                         onFailure(IllegalStateException(billingResult.debugMessage ?: "Billing setup failed"))
                         return
                     }
@@ -580,7 +577,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                 }
 
                 override fun onBillingServiceDisconnected() {
-                    Log.i(TAG, "Billing service disconnected")
+                    OpenIapLog.i("Billing service disconnected", TAG)
                 }
             },
         )

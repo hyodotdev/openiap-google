@@ -60,6 +60,77 @@ dependencies {
 }
 ```
 
+## 🧩 Using From Framework Libraries
+
+- Depend on this artifact from your framework wrapper (Expo/React Native, KMP) and inject the protocol into your bridge.
+- Create an instance with `OpenIapStore(context)` or inject the lower-level `OpenIapProtocol` if you need more control.
+- Forward your host `Activity` into the store via `setActivity(activity)` before `requestPurchase`.
+
+Example in a native module bridge:
+
+```kotlin
+private val store by lazy { OpenIapStore(reactApplicationContext) }
+
+@ReactMethod
+fun bindActivity() {
+  currentActivity?.let { store.setActivity(it) }
+}
+```
+
+### Provider Selection (simple by default)
+
+- Use `OpenIapStore(context, store?, appId?)` to select a provider.
+- Configuration: reads `BuildConfig.OPENIAP_STORE` with values:
+  - `"play"` (default): Google Play Billing
+  - `"horizon"`: Meta Horizon (requires horizon artifact in classpath)
+  - `"auto"`: detect at runtime; prefers Horizon on Quest devices if available, else Play
+
+Default setup:
+
+- This library ships as a single-variant ("play") by default. No flavors needed.
+- `OPENIAP_STORE` defaults to `"play"`; you can set `"auto"` or `"horizon"` if your app includes those providers.
+
+Override in your app or config plugin:
+
+```kotlin
+android {
+  defaultConfig {
+    // "play" | "horizon" | "auto"
+    buildConfigField("String", "OPENIAP_STORE", "\"auto\"")
+  }
+}
+```
+
+Supporting multiple stores:
+
+- Runtime auto: include both provider artifacts in your wrapper/app and set `OPENIAP_STORE="auto"`. The factory detects a Horizon/Quest env and uses Horizon if present, otherwise Play.
+- Optional flavors (scale later): define a `store` flavor dimension in your app/framework repos when you need multiple providers (e.g., `play`, `horizon`, `another1`). Keep this core library single-variant by default.
+
+### Horizon Quickstart
+
+Run the Example app on Horizon/Quest without flavors:
+
+- Build with a store hint: `./gradlew :Example:installDebug -PEXAMPLE_OPENIAP_STORE=auto`
+- Or force Horizon: `./gradlew :Example:installDebug -PEXAMPLE_OPENIAP_STORE=horizon -PEXAMPLE_HORIZON_APP_ID=YOUR_APP_ID`
+- Note: This library bundles the Horizon compatibility provider when configured; ensure you set `HORIZON_APP_ID`.
+
+Integrate Horizon in your app/framework:
+
+- Add the Horizon provider dependency (example coordinates):
+  - Gradle: `implementation("io.github.hyochan.openiap:openiap-horizon:<version>")`
+  - Or include the module and expose the factory class named above.
+- Select provider:
+  - BuildConfig: `buildConfigField("String", "OPENIAP_STORE", "\"horizon\"")`
+  - BuildConfig (Horizon only): `buildConfigField("String", "HORIZON_APP_ID", "\"YOUR_APP_ID\"")`
+  - Or runtime: `OpenIapStore(context, "horizon", "YOUR_APP_ID")` or `OpenIapStore(context, "auto")`.
+- Device notes:
+  - Use a Quest device; emulators won’t have Meta services.
+  - Ensure the right Horizon/Meta services are installed and account is signed in.
+
+### Flavor Setup (optional)
+
+When you need multiple store-specific builds, add a `store` dimension in your app/framework and put provider dependencies under `playImplementation`, `horizonImplementation`, etc. Keep this core lib unchanged and lean.
+
 ## 🚀 Quick Start
 
 ### 1. Initialize in Application
@@ -330,6 +401,11 @@ The included sample app demonstrates:
 - ✅ Purchase history and management
 - ✅ Error handling and user feedback
 - ✅ Android-specific billing features
+
+Optional: run Example on Horizon/Quest
+
+- Build with a store hint: `./gradlew :Example:installDebug -PEXAMPLE_OPENIAP_STORE=auto`
+- Values: `play` (default) | `auto` | `horizon` (requires horizon provider on classpath)
 
 ## 🔧 Advanced Usage
 

@@ -17,6 +17,17 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+
+        // Optional store override for example app: play | horizon | auto
+        val store = (project.findProperty("EXAMPLE_OPENIAP_STORE") as String?) ?: "play"
+        buildConfigField("String", "OPENIAP_STORE", "\"${store}\"")
+
+        // Optional Horizon app id (provider-specific)
+        // Prefer EXAMPLE_HORIZON_APP_ID; fallback to legacy EXAMPLE_OPENIAP_APP_ID if provided
+        val appId = (project.findProperty("EXAMPLE_HORIZON_APP_ID") as String?)
+            ?: (project.findProperty("EXAMPLE_OPENIAP_APP_ID") as String?)
+            ?: ""
+        buildConfigField("String", "HORIZON_APP_ID", "\"${appId}\"")
     }
 
     buildTypes {
@@ -44,6 +55,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

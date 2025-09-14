@@ -33,6 +33,20 @@ cd openiap-google
 adb shell am start -n dev.hyo.martie/.MainActivity
 ```
 
+### Horizon Quickstart (Local)
+
+The core library ships Play-only by default but supports Horizon if a provider is on the classpath.
+
+- Provider selection is done via `OpenIapStore(context, store?, appId?)` or BuildConfig flags.
+- Run Example targeting Horizon/auto:
+  - VS Code: use launch config "Android: Run Example (Horizon/Auto)"
+  - CLI: `./gradlew :Example:installDebug -PEXAMPLE_OPENIAP_STORE=auto`
+  - CLI (force): `./gradlew :Example:installDebug -PEXAMPLE_OPENIAP_STORE=horizon -PEXAMPLE_HORIZON_APP_ID=YOUR_APP_ID`
+  - VS Code (force): use launch config "Android: Run Example (Horizon Force)" — it will prompt for `HORIZON_APP_ID` via input box and pass `-PEXAMPLE_HORIZON_APP_ID` to Gradle.
+- Notes:
+  - Use a Quest device with Meta services; emulators are not supported.
+  - If the provider is missing, the factory falls back to Play when using `auto`.
+
 ## Code Style
 
 - Follow the official Kotlin Coding Conventions

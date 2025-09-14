@@ -5,6 +5,8 @@ plugins {
     id("com.vanniktech.maven.publish")
 }
 
+// Keep minimal: single-variant by default; BuildConfig flag added below
+
 // Resolve version from either 'openIapVersion' or 'OPENIAP_VERSION' or fallback
 val openIapVersion: String =
     (project.findProperty("openIapVersion")
@@ -20,6 +22,10 @@ android {
         
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+        // Minimal provider selection (default: play)
+        buildConfigField("String", "OPENIAP_STORE", "\"play\"")
+        // Optional Horizon app id (provider-specific). Empty by default.
+        buildConfigField("String", "HORIZON_APP_ID", "\"\"")
     }
 
     buildTypes {
@@ -44,6 +50,7 @@ android {
     // Enable Compose for composables in this library (IapContext)
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -53,6 +60,11 @@ dependencies {
     
     // Google Play Billing Library (align with app/lib v8)
     api("com.android.billingclient:billing-ktx:8.0.0")
+
+    // Meta Horizon Billing Compatibility SDK (optional provider)
+    implementation("com.meta.horizon.billingclient.api:horizon-billing-compatibility:1.1.1")
+    // Meta Horizon Platform SDK (required alongside billing compat)
+    implementation("com.meta.horizon.platform.ovr:android-platform-sdk:72")
     
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")

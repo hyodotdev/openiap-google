@@ -43,7 +43,16 @@ fun PurchaseFlowScreen(
     val activity = context as? Activity
     val uiScope = rememberCoroutineScope()
     val appContext = context.applicationContext as Context
-    val iapStore = storeParam ?: remember(appContext) { OpenIapStore(appContext) }
+    val iapStore = storeParam ?: remember(appContext) {
+        val storeKey = dev.hyo.martie.BuildConfig.OPENIAP_STORE
+        val appId = dev.hyo.martie.BuildConfig.HORIZON_APP_ID
+        android.util.Log.i("OpenIapFactory", "example-create storeKey=${storeKey} appIdSet=${appId.isNotEmpty()}")
+        runCatching { OpenIapStore(appContext, storeKey, appId) }
+            .getOrElse {
+                // Fallback to auto if horizon provider not present
+                OpenIapStore(appContext, "auto", appId)
+            }
+    }
     val products by iapStore.products.collectAsState()
     val purchases by iapStore.availablePurchases.collectAsState()
     val status by iapStore.status.collectAsState()
@@ -64,7 +73,7 @@ fun PurchaseFlowScreen(
                 if (connected) {
                     iapStore.setActivity(activity)
                     iapStore.fetchProducts(
-                        skus = IapConstants.INAPP_SKUS,
+                        skus = IapConstants.inappSkus(),
                         type = ProductRequest.ProductRequestType.INAPP
                     )
                     iapStore.getAvailablePurchases()
@@ -97,7 +106,7 @@ fun PurchaseFlowScreen(
                                 try {
                                     iapStore.setActivity(activity)
                                     iapStore.fetchProducts(
-                                        skus = IapConstants.INAPP_SKUS,
+                                        skus = IapConstants.inappSkus(),
                                         type = ProductRequest.ProductRequestType.INAPP
                                     )
                                 } catch (_: Exception) { }
@@ -311,7 +320,7 @@ fun PurchaseFlowScreen(
                             scope.launch {
                                 try {
                                     iapStore.fetchProducts(
-                                        skus = IapConstants.INAPP_SKUS,
+                                        skus = IapConstants.inappSkus(),
                                         type = ProductRequest.ProductRequestType.INAPP
                                     )
                                 } catch (_: Exception) { }

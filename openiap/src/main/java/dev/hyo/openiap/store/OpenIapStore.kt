@@ -5,6 +5,8 @@ import android.content.Context
 import dev.hyo.openiap.OpenIapModule
 import dev.hyo.openiap.OpenIapError
 import dev.hyo.openiap.OpenIapProtocol
+import dev.hyo.openiap.horizon.OpenIapHorizonModule
+import io.github.hyochan.openiap.BuildConfig
 import dev.hyo.openiap.models.*
 import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
 import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
@@ -18,7 +20,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * with observable StateFlows for UI layers (Compose/XML) to consume.
  */
 class OpenIapStore(private val module: OpenIapProtocol) {
-    constructor(context: Context) : this(OpenIapModule(context))
+    constructor(context: Context) : this(buildModule(context, null, null))
+    constructor(context: Context, store: String?) : this(buildModule(context, store, null))
+    constructor(context: Context, store: String?, appId: String?) : this(buildModule(context, store, appId))
 
     // Public state
     private val _isConnected = MutableStateFlow(false)
@@ -86,7 +90,10 @@ class OpenIapStore(private val module: OpenIapProtocol) {
 
     // Expose a way to set the current Activity for purchase flows
     fun setActivity(activity: Activity?) {
-        (module as? OpenIapModule)?.setActivity(activity)
+        when (module) {
+            is OpenIapModule -> (module as OpenIapModule).setActivity(activity)
+            is OpenIapHorizonModule -> (module as OpenIapHorizonModule).setActivity(activity)
+        }
     }
 
     init {
@@ -303,6 +310,28 @@ class OpenIapStore(private val module: OpenIapProtocol) {
         val set = current.loadings.purchasing.toMutableSet()
         set.remove(productId)
         _status.value = current.copy(loadings = current.loadings.copy(purchasing = set))
+    }
+}
+
+private fun buildModule(context: Context, store: String?, appId: String?): OpenIapProtocol {
+    val selected = (store ?: BuildConfig.OPENIAP_STORE).lowercase()
+    val resolvedAppId = appId ?: BuildConfig.HORIZON_APP_ID
+    return when (selected) {
+        "horizon", "meta", "quest" -> OpenIapHorizonModule(context, resolvedAppId)
+        "auto" -> if (isHorizonEnvironment(context)) OpenIapHorizonModule(context, resolvedAppId) else OpenIapModule(context)
+        "play", "google", "gplay", "googleplay", "gms" -> OpenIapModule(context)
+        else -> OpenIapModule(context)
+    }
+}
+
+private fun isHorizonEnvironment(context: Context): Boolean {
+    val manufacturer = android.os.Build.MANUFACTURER.lowercase()
+    if (manufacturer.contains("meta") || manufacturer.contains("oculus")) return true
+    return try {
+        context.packageManager.getPackageInfo("com.oculus.vrshell", 0)
+        true
+    } catch (_: Throwable) {
+        false
     }
 }
 

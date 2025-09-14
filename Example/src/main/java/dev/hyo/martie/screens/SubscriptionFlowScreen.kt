@@ -55,7 +55,13 @@ fun SubscriptionFlowScreen(
     val activity = context as? Activity
     val uiScope = rememberCoroutineScope()
     val appContext = context.applicationContext as Context
-    val iapStore = storeParam ?: remember(appContext) { OpenIapStore(appContext) }
+    val iapStore = storeParam ?: remember(appContext) {
+        val storeKey = dev.hyo.martie.BuildConfig.OPENIAP_STORE
+        val appId = dev.hyo.martie.BuildConfig.HORIZON_APP_ID
+        android.util.Log.i("OpenIapFactory", "example-create storeKey=${storeKey} appIdSet=${appId.isNotEmpty()}")
+        runCatching { OpenIapStore(appContext, storeKey, appId) }
+            .getOrElse { OpenIapStore(appContext, "auto", appId) }
+    }
     val products by iapStore.products.collectAsState()
     val purchases by iapStore.availablePurchases.collectAsState()
     val status by iapStore.status.collectAsState()
@@ -96,7 +102,7 @@ fun SubscriptionFlowScreen(
     LaunchedEffect(purchases) {
         val map = mutableMapOf<String, SubscriptionUiInfo>()
         purchases
-            .filter { it.productId in IapConstants.SUBS_SKUS }
+            .filter { it.productId in IapConstants.subsSkus() }
             .forEach { p ->
                 val token = p.purchaseToken ?: return@forEach
                 val info = fetchSubStatusFromServer(p.productId, token)
@@ -118,9 +124,9 @@ fun SubscriptionFlowScreen(
                 val connected = iapStore.initConnection()
                 if (connected) {
                     iapStore.setActivity(activity)
-                    println("SubscriptionFlow: Loading subscription products: ${IapConstants.SUBS_SKUS}")
+                    println("SubscriptionFlow: Loading subscription products: ${IapConstants.subsSkus()}")
                     iapStore.fetchProducts(
-                        skus = IapConstants.SUBS_SKUS,
+                        skus = IapConstants.subsSkus(),
                         type = ProductRequest.ProductRequestType.SUBS
                     )
                     iapStore.getAvailablePurchases()
@@ -153,10 +159,10 @@ fun SubscriptionFlowScreen(
                             scope.launch {
                                 try {
                                     iapStore.setActivity(activity)
-                                    iapStore.fetchProducts(
-                                        skus = IapConstants.SUBS_SKUS,
-                                        type = ProductRequest.ProductRequestType.SUBS
-                                    )
+                    iapStore.fetchProducts(
+                        skus = IapConstants.subsSkus(),
+                        type = ProductRequest.ProductRequestType.SUBS
+                    )
                                 } catch (_: Exception) { }
                             }
                         },
@@ -247,7 +253,7 @@ fun SubscriptionFlowScreen(
             
             // Active Subscriptions Section
             // Treat any purchase with matching subscription SKU as subscribed
-            val activeSubscriptions = purchases.filter { it.productId in IapConstants.SUBS_SKUS }
+            val activeSubscriptions = purchases.filter { it.productId in IapConstants.subsSkus() }
             if (activeSubscriptions.isNotEmpty()) {
                 item {
                     SectionHeaderView(title = "Active Subscriptions")
@@ -454,5 +460,3 @@ fun SubscriptionFlowScreen(
         )
     }
 }
-
-// Moved to reusable component at: screens/uis/ActiveSubscriptionListItem.kt

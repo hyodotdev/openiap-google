@@ -13,6 +13,17 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "🧱 Android: Assemble Example (Horizon/Auto)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "bash",
+            "runtimeArgs": [
+                "-lc",
+                "./gradlew :Example:assembleDebug -PEXAMPLE_OPENIAP_STORE=auto"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "▶️ Android: Start Example Activity",
             "type": "node",
             "request": "launch",
@@ -66,6 +77,25 @@
                 "./gradlew :openiap:test --no-daemon"
             ],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "🎯 Android: Run Example (Horizon Force)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "bash",
+            "runtimeArgs": [
+                "-lc",
+                "./gradlew :Example:installDebug -PEXAMPLE_OPENIAP_STORE=horizon -PEXAMPLE_HORIZON_APP_ID='${input:horizonAppId}' && adb shell am start -n dev.hyo.martie/.MainActivity"
+            ],
+            "console": "integratedTerminal"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "horizonAppId",
+            "type": "promptString",
+            "description": "Enter Horizon APP_ID",
+            "default": ""
         }
     ]
 }
