@@ -351,18 +351,12 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
     // Receipt Validation
     // ============================================================================
     
-    override suspend fun validateReceipt(
-        sku: String,
-        androidOptions: ReceiptValidationProps.AndroidValidationOptions?
-    ): ReceiptValidationResultAndroid? {
+    override suspend fun validateReceipt(options: ReceiptValidationProps): ReceiptValidationResultAndroid? {
         // Receipt validation should be done server-side
         // This is a placeholder for the validation logic
         // In production, send the purchase token to your backend for validation
         return null
     }
-
-    override suspend fun validateReceipt(options: ReceiptValidationProps): ReceiptValidationResultAndroid? =
-        validateReceipt(options.sku, options.androidOptions)
     
     // ============================================================================
     // PurchasesUpdatedListener Implementation

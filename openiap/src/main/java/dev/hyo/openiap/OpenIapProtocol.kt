@@ -97,21 +97,9 @@ interface OpenIapProtocol {
     // ============================================================================
     // Validation
     // ============================================================================
-    
     /**
-     * Validate a receipt with your server or platform servers.
+     * Validate a receipt with your server (recommended) or platform servers.
      * All purchase types should be validated before granting entitlements.
-     * @param sku Product SKU to validate
-     * @param androidOptions Android-specific validation options
-     * @return Validation result with receipt data
-     */
-    suspend fun validateReceipt(
-        sku: String,
-        androidOptions: ReceiptValidationProps.AndroidValidationOptions? = null
-    ): ReceiptValidationResultAndroid?
-
-    /**
-     * Overload matching openiap.dev validateReceipt(options: ReceiptValidationProps)
      */
     suspend fun validateReceipt(options: ReceiptValidationProps): ReceiptValidationResultAndroid?
 

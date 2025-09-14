@@ -57,8 +57,6 @@ class OpenIapStoreTest {
             return PurchaseResult(responseCode = 0)
         }
 
-        override suspend fun validateReceipt(sku: String, androidOptions: ReceiptValidationProps.AndroidValidationOptions?): ReceiptValidationResultAndroid? = null
-
         override suspend fun validateReceipt(options: ReceiptValidationProps): ReceiptValidationResultAndroid? = null
 
         override suspend fun acknowledgePurchaseAndroid(purchaseToken: String) {}
