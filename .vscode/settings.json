@@ -39,5 +39,9 @@
     "typescript.validate.enable": false,
     "javascript.validate.enable": false,
     "typescript.tsc.autoDetect": "off",
-    "npm.autoDetect": "off"
+    "npm.autoDetect": "off",
+    "cSpell.words": [
+        "billingclient",
+        "openiap"
+    ]
 }

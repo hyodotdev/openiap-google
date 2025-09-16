@@ -124,7 +124,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
     // ============================================================================
     
     override suspend fun requestPurchase(
-        request: RequestPurchaseAndroidProps,
+        request: RequestPurchaseParams,
         type: ProductRequest.ProductRequestType
     ): List<OpenIapPurchase> = withContext(Dispatchers.IO) {
         val activity = currentActivityRef?.get() ?: (context as? Activity)
@@ -198,7 +198,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                 val flowResult = client.launchBillingFlow(activity, billingFlowParams)
                 Log.d(TAG, "launchBillingFlow result=${flowResult.responseCode} msg=${flowResult.debugMessage}")
                 if (flowResult.responseCode != BillingClient.BillingResponseCode.OK) {
-                    val err = OpenIapError.PurchaseFailed(flowResult.debugMessage ?: "Billing flow failed")
+                    val err = OpenIapError.PurchaseFailed()
                     purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
                     currentPurchaseCallback?.invoke(Result.success(emptyList()))
                 }
@@ -245,7 +245,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                         // Do not complete here; wait for onPurchasesUpdated
                     } else {
                         Log.w(TAG, "queryProductDetails failed: code=${billingResult.responseCode} msg=${billingResult.debugMessage}")
-                        val err = OpenIapError.QueryProduct(billingResult.debugMessage ?: "Product not found: ${request.skus}")
+                        val err = OpenIapError.QueryProduct()
                         purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
                         currentPurchaseCallback?.invoke(Result.success(emptyList()))
                     }

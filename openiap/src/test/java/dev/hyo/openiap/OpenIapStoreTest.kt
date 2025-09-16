@@ -44,7 +44,7 @@ class OpenIapStoreTest {
 
         override suspend fun hasActiveSubscriptions(subscriptionIds: List<String>?): Boolean = activeSubsToReturn.isNotEmpty()
 
-        override suspend fun requestPurchase(request: RequestPurchaseAndroidProps, type: ProductRequest.ProductRequestType): List<OpenIapPurchase> {
+        override suspend fun requestPurchase(request: RequestPurchaseParams, type: ProductRequest.ProductRequestType): List<OpenIapPurchase> {
             // Broadcast to listeners
             requestEmitsPurchases.forEach { p ->
                 updateListeners.forEach { it.onPurchaseUpdated(p) }
@@ -133,7 +133,7 @@ class OpenIapStoreTest {
         fake.requestEmitsPurchases = listOf(emitted)
 
         val result = store.requestPurchase(
-            RequestPurchaseAndroidProps(skus = listOf("sku1")),
+            RequestPurchaseParams(skus = listOf("sku1")),
             ProductRequest.ProductRequestType.INAPP
         )
 

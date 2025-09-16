@@ -15,256 +15,280 @@ sealed class OpenIapError : Exception() {
         "platform" to "android",
     )
 
-    data class ProductNotFound(val productId: String) : OpenIapError() {
-        override val code = "PRODUCT_NOT_FOUND"
-        override val message = "Product not found: $productId"
+    class ProductNotFound(val productId: String) : OpenIapError() {
+        override val code = CODE
+        override val message = MESSAGE
+
+        companion object {
+            const val CODE = "PRODUCT_NOT_FOUND"
+            const val MESSAGE = "Product not found"
+        }
     }
 
-    data class PurchaseFailed(override val message: String) : OpenIapError() {
-        override val code = "PURCHASE_FAILED"
+    class PurchaseFailed : OpenIapError() {
+        override val code = CODE
+        override val message = MESSAGE
+
+        companion object {
+            const val CODE = "PURCHASE_FAILED"
+            const val MESSAGE = "Purchase failed"
+        }
     }
 
     object PurchaseCancelled : OpenIapError() {
-        override val code = "PURCHASE_CANCELLED"
-        override val message = "Purchase was cancelled by the user"
+        const val CODE = "PURCHASE_CANCELLED"
+        const val MESSAGE = "Purchase was cancelled by the user"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object PurchaseDeferred : OpenIapError() {
-        override val code = "PURCHASE_DEFERRED"
-        override val message = "Purchase was deferred"
+        const val CODE = "PURCHASE_DEFERRED"
+        const val MESSAGE = "Purchase was deferred"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object PaymentNotAllowed : OpenIapError() {
-        override val code = "PAYMENT_NOT_ALLOWED"
-        override val message = "Payment not allowed"
+        const val CODE = "PAYMENT_NOT_ALLOWED"
+        const val MESSAGE = "Payment not allowed"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
-    data class BillingError(override val message: String) : OpenIapError() {
-        override val code = "BILLING_ERROR"
+    class BillingError : OpenIapError() {
+        override val code = CODE
+        override val message = MESSAGE
+
+        companion object {
+            const val CODE = "BILLING_ERROR"
+            const val MESSAGE = "Billing error"
+        }
     }
 
-    data class InvalidReceipt(override val message: String) : OpenIapError() {
-        override val code = "INVALID_RECEIPT"
+    class InvalidReceipt : OpenIapError() {
+        override val code = CODE
+        override val message = MESSAGE
+
+        companion object {
+            const val CODE = "INVALID_RECEIPT"
+            const val MESSAGE = "Invalid receipt"
+        }
     }
 
     object NetworkError : OpenIapError() {
-        override val code = "NETWORK_ERROR"
-        override val message = "Network connection error"
+        const val CODE = "NETWORK_ERROR"
+        const val MESSAGE = "Network connection error"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
-    data class VerificationFailed(override val message: String) : OpenIapError() {
-        override val code = "VERIFICATION_FAILED"
+    class VerificationFailed : OpenIapError() {
+        override val code = CODE
+        override val message = MESSAGE
+
+        companion object {
+            const val CODE = "VERIFICATION_FAILED"
+            const val MESSAGE = "Verification failed"
+        }
     }
 
-    data class RestoreFailed(override val message: String) : OpenIapError() {
-        override val code = "RESTORE_FAILED"
+    class RestoreFailed : OpenIapError() {
+        override val code = CODE
+        override val message = MESSAGE
+
+        companion object {
+            const val CODE = "RESTORE_FAILED"
+            const val MESSAGE = "Restore failed"
+        }
     }
 
-    data class UnknownError(override val message: String) : OpenIapError() {
-        override val code = "UNKNOWN_ERROR"
+    class UnknownError : OpenIapError() {
+        override val code = CODE
+        override val message = MESSAGE
+
+        companion object {
+            const val CODE = "UNKNOWN_ERROR"
+            const val MESSAGE = "Unknown error"
+        }
     }
 
     object NotSupported : OpenIapError() {
-        override val code = "NOT_SUPPORTED"
-        override val message = "Operation not supported"
+        const val CODE = "NOT_SUPPORTED"
+        const val MESSAGE = "Operation not supported"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object NotPrepared : OpenIapError() {
-        override val code = "NOT_PREPARED"
-        override val message = "Billing client not ready"
+        const val CODE = "NOT_PREPARED"
+        const val MESSAGE = "Billing client not ready"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
-    data class InitConnection(override val message: String) : OpenIapError() {
-        override val code = "INIT_CONNECTION"
+    class InitConnection : OpenIapError() {
+        override val code = CODE
+        override val message = MESSAGE
+
+        companion object {
+            const val CODE = "INIT_CONNECTION"
+            const val MESSAGE = "Failed to initialize billing connection"
+        }
     }
 
-    data class QueryProduct(override val message: String) : OpenIapError() {
-        override val code = "QUERY_PRODUCT"
+    class QueryProduct : OpenIapError() {
+        override val code = CODE
+        override val message = MESSAGE
+
+        companion object {
+            const val CODE = "QUERY_PRODUCT"
+            const val MESSAGE = "Failed to query product"
+        }
     }
 
     object EmptySkuList : OpenIapError() {
-        override val code = "EMPTY_SKU_LIST"
-        override val message = "SKU list cannot be empty"
+        const val CODE = "EMPTY_SKU_LIST"
+        const val MESSAGE = "SKU list cannot be empty"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
-    data class SkuNotFound(val sku: String) : OpenIapError() {
-        override val code = "SKU_NOT_FOUND"
-        override val message = "SKU not found in cached products: $sku"
+    class SkuNotFound(val sku: String) : OpenIapError() {
+        override val code = CODE
+        override val message = MESSAGE
+
+        companion object {
+            const val CODE = "SKU_NOT_FOUND"
+            const val MESSAGE = "SKU not found"
+        }
     }
 
     object SkuOfferMismatch : OpenIapError() {
-        override val code = "SKU_OFFER_MISMATCH"
-        override val message = "SKU and offer token count mismatch"
+        const val CODE = "SKU_OFFER_MISMATCH"
+        const val MESSAGE = "SKU and offer token count mismatch"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object MissingCurrentActivity : OpenIapError() {
-        override val code = "MISSING_CURRENT_ACTIVITY"
-        override val message = "Current activity is not available"
+        const val CODE = "MISSING_CURRENT_ACTIVITY"
+        const val MESSAGE = "Current activity is not available"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object UserCancelled : OpenIapError() {
-        override val code = "USER_CANCELLED"
-        override val message = "User cancelled the operation"
+        const val CODE = "USER_CANCELLED"
+        const val MESSAGE = "User cancelled the operation"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object ItemAlreadyOwned : OpenIapError() {
-        override val code = "ITEM_ALREADY_OWNED"
-        override val message = "Item is already owned"
+        const val CODE = "ITEM_ALREADY_OWNED"
+        const val MESSAGE = "Item is already owned"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object ItemNotOwned : OpenIapError() {
-        override val code = "ITEM_NOT_OWNED"
-        override val message = "Item is not owned"
+        const val CODE = "ITEM_NOT_OWNED"
+        const val MESSAGE = "Item is not owned"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object ServiceUnavailable : OpenIapError() {
-        override val code = "SERVICE_UNAVAILABLE"
-        override val message = "Google Play service is unavailable"
+        const val CODE = "SERVICE_UNAVAILABLE"
+        const val MESSAGE = "Google Play service is unavailable"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object BillingUnavailable : OpenIapError() {
-        override val code = "BILLING_UNAVAILABLE"
-        override val message = "Billing API version is not supported"
+        const val CODE = "BILLING_UNAVAILABLE"
+        const val MESSAGE = "Billing API version is not supported"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object ItemUnavailable : OpenIapError() {
-        override val code = "ITEM_UNAVAILABLE"
-        override val message = "Requested product is not available for purchase"
+        const val CODE = "ITEM_UNAVAILABLE"
+        const val MESSAGE = "Requested product is not available for purchase"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object DeveloperError : OpenIapError() {
-        override val code = "DEVELOPER_ERROR"
-        override val message = "Invalid arguments provided to the API"
+        const val CODE = "DEVELOPER_ERROR"
+        const val MESSAGE = "Invalid arguments provided to the API"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object FeatureNotSupported : OpenIapError() {
-        override val code = "FEATURE_NOT_SUPPORTED"
-        override val message = "Requested feature is not supported by Play Store"
+        const val CODE = "FEATURE_NOT_SUPPORTED"
+        const val MESSAGE = "Requested feature is not supported by Play Store"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object ServiceDisconnected : OpenIapError() {
-        override val code = "SERVICE_DISCONNECTED"
-        override val message = "Play Store service is not connected"
+        const val CODE = "SERVICE_DISCONNECTED"
+        const val MESSAGE = "Play Store service is not connected"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     object ServiceTimeout : OpenIapError() {
-        override val code = "SERVICE_TIMEOUT"
-        override val message = "The request has reached the maximum timeout before Google Play responds"
+        const val CODE = "SERVICE_TIMEOUT"
+        const val MESSAGE = "The request has reached the maximum timeout before Google Play responds"
+        override val code: String = CODE
+        override val message: String = MESSAGE
     }
 
     companion object {
-        // ---------------------------------------------------------------------
-        // OpenIAP error code constants (parity with openiap-apple)
-        // ---------------------------------------------------------------------
-        const val E_UNKNOWN = "E_UNKNOWN"
-        const val E_USER_CANCELLED = "E_USER_CANCELLED"
-        const val E_USER_ERROR = "E_USER_ERROR"
-        const val E_ITEM_UNAVAILABLE = "E_ITEM_UNAVAILABLE"
-        const val E_REMOTE_ERROR = "E_REMOTE_ERROR"
-        const val E_NETWORK_ERROR = "E_NETWORK_ERROR"
-        const val E_SERVICE_ERROR = "E_SERVICE_ERROR"
-        const val E_RECEIPT_FAILED = "E_RECEIPT_FAILED"
-        const val E_RECEIPT_FINISHED_FAILED = "E_RECEIPT_FINISHED_FAILED"
-        const val E_NOT_PREPARED = "E_NOT_PREPARED"
-        const val E_NOT_ENDED = "E_NOT_ENDED"
-        const val E_ALREADY_OWNED = "E_ALREADY_OWNED"
-        const val E_DEVELOPER_ERROR = "E_DEVELOPER_ERROR"
-        const val E_BILLING_RESPONSE_JSON_PARSE_ERROR = "E_BILLING_RESPONSE_JSON_PARSE_ERROR"
-        const val E_DEFERRED_PAYMENT = "E_DEFERRED_PAYMENT"
-        const val E_INTERRUPTED = "E_INTERRUPTED"
-        const val E_IAP_NOT_AVAILABLE = "E_IAP_NOT_AVAILABLE"
-        const val E_PURCHASE_ERROR = "E_PURCHASE_ERROR"
-        const val E_SYNC_ERROR = "E_SYNC_ERROR"
-        const val E_TRANSACTION_VALIDATION_FAILED = "E_TRANSACTION_VALIDATION_FAILED"
-        const val E_ACTIVITY_UNAVAILABLE = "E_ACTIVITY_UNAVAILABLE"
-        const val E_ALREADY_PREPARED = "E_ALREADY_PREPARED"
-        const val E_PENDING = "E_PENDING"
-        const val E_CONNECTION_CLOSED = "E_CONNECTION_CLOSED"
-        const val E_INIT_CONNECTION = "E_INIT_CONNECTION"
-        const val E_SERVICE_DISCONNECTED = "E_SERVICE_DISCONNECTED"
-        const val E_QUERY_PRODUCT = "E_QUERY_PRODUCT"
-        const val E_SKU_NOT_FOUND = "E_SKU_NOT_FOUND"
-        const val E_SKU_OFFER_MISMATCH = "E_SKU_OFFER_MISMATCH"
-        const val E_ITEM_NOT_OWNED = "E_ITEM_NOT_OWNED"
-        const val E_BILLING_UNAVAILABLE = "E_BILLING_UNAVAILABLE"
-        const val E_FEATURE_NOT_SUPPORTED = "E_FEATURE_NOT_SUPPORTED"
-        const val E_EMPTY_SKU_LIST = "E_EMPTY_SKU_LIST"
-        const val E_SERVICE_UNAVAILABLE = "E_SERVICE_UNAVAILABLE"
-
-        // ---------------------------------------------------------------------
-        // Helpers: map between sealed class and E_* string codes
-        // ---------------------------------------------------------------------
-        fun toCode(error: OpenIapError): String = when (error) {
-            is PurchaseCancelled -> E_USER_CANCELLED
-            is UserCancelled -> E_USER_CANCELLED
-            is PurchaseDeferred -> E_DEFERRED_PAYMENT
-            is ServiceUnavailable -> E_SERVICE_UNAVAILABLE
-            is BillingUnavailable -> E_BILLING_UNAVAILABLE
-            is ItemUnavailable -> E_ITEM_UNAVAILABLE
-            is DeveloperError -> E_DEVELOPER_ERROR
-            is ItemAlreadyOwned -> E_ALREADY_OWNED
-            is ItemNotOwned -> E_ITEM_NOT_OWNED
-            is ServiceDisconnected -> E_SERVICE_DISCONNECTED
-            is FeatureNotSupported -> E_FEATURE_NOT_SUPPORTED
-            is ServiceTimeout -> E_SERVICE_ERROR
-            is NetworkError -> E_NETWORK_ERROR
-            is BillingError -> E_SERVICE_ERROR
-            is NotPrepared -> E_NOT_PREPARED
-            is InitConnection -> E_INIT_CONNECTION
-            is QueryProduct -> E_QUERY_PRODUCT
-            is EmptySkuList -> E_EMPTY_SKU_LIST
-            is SkuNotFound -> E_SKU_NOT_FOUND
-            is SkuOfferMismatch -> E_SKU_OFFER_MISMATCH
-            is MissingCurrentActivity -> E_ACTIVITY_UNAVAILABLE
-            is PaymentNotAllowed -> E_IAP_NOT_AVAILABLE
-            is RestoreFailed -> E_SERVICE_ERROR
-            is VerificationFailed -> E_TRANSACTION_VALIDATION_FAILED
-            is InvalidReceipt -> E_RECEIPT_FAILED
-            is PurchaseFailed -> E_PURCHASE_ERROR
-            is ProductNotFound -> E_SKU_NOT_FOUND
-            is UnknownError -> E_UNKNOWN
-            is NotSupported -> E_FEATURE_NOT_SUPPORTED
+        private val defaultMessages: Map<String, String> by lazy {
+            mapOf(
+                ProductNotFound.CODE to ProductNotFound.MESSAGE,
+                PurchaseFailed.CODE to PurchaseFailed.MESSAGE,
+                PurchaseCancelled.CODE to PurchaseCancelled.MESSAGE,
+                PurchaseDeferred.CODE to PurchaseDeferred.MESSAGE,
+                PaymentNotAllowed.CODE to PaymentNotAllowed.MESSAGE,
+                BillingError.CODE to BillingError.MESSAGE,
+                InvalidReceipt.CODE to InvalidReceipt.MESSAGE,
+                NetworkError.CODE to NetworkError.MESSAGE,
+                VerificationFailed.CODE to VerificationFailed.MESSAGE,
+                RestoreFailed.CODE to RestoreFailed.MESSAGE,
+                UnknownError.CODE to UnknownError.MESSAGE,
+                NotSupported.CODE to NotSupported.MESSAGE,
+                NotPrepared.CODE to NotPrepared.MESSAGE,
+                InitConnection.CODE to InitConnection.MESSAGE,
+                QueryProduct.CODE to QueryProduct.MESSAGE,
+                EmptySkuList.CODE to EmptySkuList.MESSAGE,
+                SkuNotFound.CODE to SkuNotFound.MESSAGE,
+                SkuOfferMismatch.CODE to SkuOfferMismatch.MESSAGE,
+                MissingCurrentActivity.CODE to MissingCurrentActivity.MESSAGE,
+                UserCancelled.CODE to UserCancelled.MESSAGE,
+                ItemAlreadyOwned.CODE to ItemAlreadyOwned.MESSAGE,
+                ItemNotOwned.CODE to ItemNotOwned.MESSAGE,
+                ServiceUnavailable.CODE to ServiceUnavailable.MESSAGE,
+                BillingUnavailable.CODE to BillingUnavailable.MESSAGE,
+                ItemUnavailable.CODE to ItemUnavailable.MESSAGE,
+                DeveloperError.CODE to DeveloperError.MESSAGE,
+                FeatureNotSupported.CODE to FeatureNotSupported.MESSAGE,
+                ServiceDisconnected.CODE to ServiceDisconnected.MESSAGE,
+                ServiceTimeout.CODE to ServiceTimeout.MESSAGE
+            )
         }
 
-        fun defaultMessage(code: String): String = when (code) {
-            E_USER_CANCELLED -> "User cancelled the purchase flow"
-            E_USER_ERROR -> "User action error"
-            E_DEFERRED_PAYMENT -> "Payment was deferred"
-            E_INTERRUPTED -> "Purchase flow interrupted"
-            E_ITEM_UNAVAILABLE -> "Item unavailable"
-            E_SKU_NOT_FOUND -> "SKU not found"
-            E_SKU_OFFER_MISMATCH -> "SKU offer mismatch"
-            E_QUERY_PRODUCT -> "Failed to query product"
-            E_ALREADY_OWNED -> "Item already owned"
-            E_ITEM_NOT_OWNED -> "Item not owned"
-            E_NETWORK_ERROR -> "Network connection error"
-            E_SERVICE_ERROR -> "Store service error"
-            E_REMOTE_ERROR -> "Remote service error"
-            E_INIT_CONNECTION -> "Failed to initialize billing connection"
-            E_SERVICE_DISCONNECTED -> "Billing service disconnected"
-            E_CONNECTION_CLOSED -> "Connection closed"
-            E_IAP_NOT_AVAILABLE -> "In-app purchases not available on this device"
-            E_BILLING_UNAVAILABLE -> "Billing unavailable"
-            E_FEATURE_NOT_SUPPORTED -> "Feature not supported on this platform"
-            E_SYNC_ERROR -> "Sync error"
-            E_RECEIPT_FAILED -> "Receipt validation failed"
-            E_RECEIPT_FINISHED_FAILED -> "Receipt finish failed"
-            E_TRANSACTION_VALIDATION_FAILED -> "Transaction validation failed"
-            E_EMPTY_SKU_LIST -> "Empty SKU list provided"
-            E_NOT_PREPARED -> "Billing is not prepared"
-            E_NOT_ENDED -> "Billing connection not ended"
-            E_DEVELOPER_ERROR -> "Developer configuration error"
-            E_PURCHASE_ERROR -> "Purchase error"
-            E_ACTIVITY_UNAVAILABLE -> "Required activity is unavailable"
-            E_ALREADY_PREPARED -> "Billing already prepared"
-            E_PENDING -> "Transaction pending"
-            E_BILLING_RESPONSE_JSON_PARSE_ERROR -> "Billing response parse error"
-            E_SERVICE_UNAVAILABLE -> "Service unavailable"
-            else -> "Unknown error occurred"
-        }
-        /**
-         * Convert Google Play Billing response code to OpenIapError
-         */
+        fun toCode(error: OpenIapError): String = error.code
+
+        fun defaultMessage(code: String): String =
+            defaultMessages[code] ?: "Unknown error occurred"
+
+        @Suppress("DEPRECATION")
         fun fromBillingResponseCode(responseCode: Int, debugMessage: String? = null): OpenIapError {
             return when (responseCode) {
                 BillingClient.BillingResponseCode.USER_CANCELED -> UserCancelled
@@ -272,66 +296,17 @@ sealed class OpenIapError : Exception() {
                 BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> BillingUnavailable
                 BillingClient.BillingResponseCode.ITEM_UNAVAILABLE -> ItemUnavailable
                 BillingClient.BillingResponseCode.DEVELOPER_ERROR -> DeveloperError
-                BillingClient.BillingResponseCode.ERROR -> BillingError(debugMessage ?: "Billing error")
+                BillingClient.BillingResponseCode.ERROR -> BillingError()
                 BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> ItemAlreadyOwned
                 BillingClient.BillingResponseCode.ITEM_NOT_OWNED -> ItemNotOwned
                 BillingClient.BillingResponseCode.SERVICE_DISCONNECTED -> ServiceDisconnected
                 BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED -> FeatureNotSupported
                 BillingClient.BillingResponseCode.SERVICE_TIMEOUT -> ServiceTimeout
-                else -> UnknownError(debugMessage ?: "Unknown error: $responseCode")
+                else -> UnknownError()
             }
         }
 
-        /**
-         * Get all error codes as a map for external use
-         */
-        fun getAllErrorCodes(): Map<String, String> = mapOf(
-            // User Action Errors
-            E_USER_CANCELLED to defaultMessage(E_USER_CANCELLED),
-            E_USER_ERROR to defaultMessage(E_USER_ERROR),
-            E_DEFERRED_PAYMENT to defaultMessage(E_DEFERRED_PAYMENT),
-            E_INTERRUPTED to defaultMessage(E_INTERRUPTED),
-
-            // Product Errors
-            E_ITEM_UNAVAILABLE to defaultMessage(E_ITEM_UNAVAILABLE),
-            E_SKU_NOT_FOUND to defaultMessage(E_SKU_NOT_FOUND),
-            E_SKU_OFFER_MISMATCH to defaultMessage(E_SKU_OFFER_MISMATCH),
-            E_QUERY_PRODUCT to defaultMessage(E_QUERY_PRODUCT),
-            E_ALREADY_OWNED to defaultMessage(E_ALREADY_OWNED),
-            E_ITEM_NOT_OWNED to defaultMessage(E_ITEM_NOT_OWNED),
-
-            // Network & Service Errors
-            E_NETWORK_ERROR to defaultMessage(E_NETWORK_ERROR),
-            E_SERVICE_ERROR to defaultMessage(E_SERVICE_ERROR),
-            E_REMOTE_ERROR to defaultMessage(E_REMOTE_ERROR),
-            E_INIT_CONNECTION to defaultMessage(E_INIT_CONNECTION),
-            E_SERVICE_DISCONNECTED to defaultMessage(E_SERVICE_DISCONNECTED),
-            E_CONNECTION_CLOSED to defaultMessage(E_CONNECTION_CLOSED),
-            E_IAP_NOT_AVAILABLE to defaultMessage(E_IAP_NOT_AVAILABLE),
-            E_BILLING_UNAVAILABLE to defaultMessage(E_BILLING_UNAVAILABLE),
-            E_FEATURE_NOT_SUPPORTED to defaultMessage(E_FEATURE_NOT_SUPPORTED),
-            E_SYNC_ERROR to defaultMessage(E_SYNC_ERROR),
-
-            // Validation Errors
-            E_RECEIPT_FAILED to defaultMessage(E_RECEIPT_FAILED),
-            E_RECEIPT_FINISHED_FAILED to defaultMessage(E_RECEIPT_FINISHED_FAILED),
-            E_TRANSACTION_VALIDATION_FAILED to defaultMessage(E_TRANSACTION_VALIDATION_FAILED),
-            E_EMPTY_SKU_LIST to defaultMessage(E_EMPTY_SKU_LIST),
-
-            // Platform/Parsing
-            E_BILLING_RESPONSE_JSON_PARSE_ERROR to defaultMessage(E_BILLING_RESPONSE_JSON_PARSE_ERROR),
-            E_ACTIVITY_UNAVAILABLE to defaultMessage(E_ACTIVITY_UNAVAILABLE),
-
-            // Lifecycle/Generic
-            E_NOT_PREPARED to defaultMessage(E_NOT_PREPARED),
-            E_NOT_ENDED to defaultMessage(E_NOT_ENDED),
-            E_ALREADY_PREPARED to defaultMessage(E_ALREADY_PREPARED),
-            E_PENDING to defaultMessage(E_PENDING),
-            E_PURCHASE_ERROR to defaultMessage(E_PURCHASE_ERROR),
-            E_SERVICE_UNAVAILABLE to defaultMessage(E_SERVICE_UNAVAILABLE),
-
-            // Generic
-            E_UNKNOWN to defaultMessage(E_UNKNOWN)
-        )
+        fun getAllErrorCodes(): Map<String, String> = defaultMessages
     }
+
 }

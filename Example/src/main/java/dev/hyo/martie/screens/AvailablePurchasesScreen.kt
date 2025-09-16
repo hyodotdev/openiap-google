@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,6 +23,7 @@ import dev.hyo.martie.screens.uis.*
 import dev.hyo.openiap.IapContext
 import dev.hyo.openiap.store.OpenIapStore
 import dev.hyo.openiap.models.*
+import dev.hyo.openiap.store.PurchaseResultStatus
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,11 +38,7 @@ fun AvailablePurchasesScreen(
     val purchases by iapStore.availablePurchases.collectAsState()
     val status by iapStore.status.collectAsState()
     val connectionStatus by iapStore.connectionStatus.collectAsState()
-    
-    var showRestoreResult by remember { mutableStateOf(false) }
-    var restoreResultMessage by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
+    val statusMessage = status.lastPurchaseResult
     
     // Modal state
     var selectedPurchase by remember { mutableStateOf<OpenIapPurchase?>(null) }
@@ -67,7 +65,7 @@ fun AvailablePurchasesScreen(
                 title = { Text("Available Purchases") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -77,11 +75,15 @@ fun AvailablePurchasesScreen(
                             scope.launch {
                                 try {
                                     val restored = iapStore.restorePurchases()
-                                    showRestoreResult = true
-                                    restoreResultMessage = "Restored ${restored.size} purchases"
+                                    iapStore.postStatusMessage(
+                                        message = "Restored ${restored.size} purchases",
+                                        status = PurchaseResultStatus.SUCCESS
+                                    )
                                 } catch (e: Exception) {
-                                    showError = true
-                                    errorMessage = e.message ?: "Restore failed"
+                                    iapStore.postStatusMessage(
+                                        message = e.message ?: "Restore failed",
+                                        status = PurchaseResultStatus.ERROR
+                                    )
                                 }
                             }
                         },
@@ -161,12 +163,12 @@ fun AvailablePurchasesScreen(
                 }
             }
             
-            // Restore Result
-            if (showRestoreResult) {
-                item {
+            statusMessage?.let { result ->
+                item("status-message") {
                     PurchaseResultCard(
-                        message = restoreResultMessage,
-                        onDismiss = { showRestoreResult = false }
+                        message = result.message,
+                        status = result.status,
+                        onDismiss = { iapStore.clearStatusMessage() }
                     )
                 }
             }
@@ -214,16 +216,25 @@ fun AvailablePurchasesScreen(
                                 try {
                                     val ok = iapStore.finishTransaction(purchase, isConsumable)
                                     if (ok) {
-                                        showRestoreResult = true
-                                        restoreResultMessage = "Transaction finished successfully"
+                                        iapStore.postStatusMessage(
+                                            message = "Transaction finished successfully",
+                                            status = PurchaseResultStatus.SUCCESS,
+                                            productId = purchase.productId
+                                        )
                                         iapStore.getAvailablePurchases()
                                     } else {
-                                        showError = true
-                                        errorMessage = "Failed to finish transaction"
+                                        iapStore.postStatusMessage(
+                                            message = "Failed to finish transaction",
+                                            status = PurchaseResultStatus.ERROR,
+                                            productId = purchase.productId
+                                        )
                                     }
                                 } catch (e: Exception) {
-                                    showError = true
-                                    errorMessage = e.message ?: "Failed to finish transaction"
+                                    iapStore.postStatusMessage(
+                                        message = e.message ?: "Failed to finish transaction",
+                                        status = PurchaseResultStatus.ERROR,
+                                        productId = purchase.productId
+                                    )
                                 }
                             }
                         },
@@ -399,11 +410,15 @@ fun AvailablePurchasesScreen(
                             scope.launch {
                                 try {
                                     val restored = iapStore.restorePurchases()
-                                    showRestoreResult = true
-                                    restoreResultMessage = "Restored ${restored.size} purchases"
+                                    iapStore.postStatusMessage(
+                                        message = "Restored ${restored.size} purchases",
+                                        status = PurchaseResultStatus.SUCCESS
+                                    )
                                 } catch (e: Exception) {
-                                    showError = true
-                                    errorMessage = e.message ?: "Restore failed"
+                                    iapStore.postStatusMessage(
+                                        message = e.message ?: "Restore failed",
+                                        status = PurchaseResultStatus.ERROR
+                                    )
                                 }
                             }
                         },
@@ -417,20 +432,6 @@ fun AvailablePurchasesScreen(
                 }
             }
         }
-    }
-    
-    // Error Dialog
-    if (showError) {
-        AlertDialog(
-            onDismissRequest = { showError = false },
-            title = { Text("Error") },
-            text = { Text(errorMessage) },
-            confirmButton = {
-                TextButton(onClick = { showError = false }) {
-                    Text("OK")
-                }
-            }
-        )
     }
     
     // Purchase Detail Modal

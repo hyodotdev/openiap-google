@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.foundation.BorderStroke
@@ -28,6 +29,7 @@ import dev.hyo.openiap.models.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import dev.hyo.openiap.OpenIapError
+import dev.hyo.openiap.store.PurchaseResultStatus
 
 // Helper to format remaining time like "3d 4h" / "2h 12m" / "35m"
 private fun formatRemaining(deltaMillis: Long): String {
@@ -102,9 +104,7 @@ fun SubscriptionFlowScreen(
             }
         subStatus = map
     }
-    
-    var showError by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
+    val statusMessage = status.lastPurchaseResult
     
     // Modal states
     var selectedProduct by remember { mutableStateOf<OpenIapProduct?>(null) }
@@ -143,7 +143,7 @@ fun SubscriptionFlowScreen(
                 title = { Text("Subscription Flow") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -228,6 +228,15 @@ fun SubscriptionFlowScreen(
                     }
                 }
             }
+            statusMessage?.let { result ->
+                item("status-message") {
+                    PurchaseResultCard(
+                        message = result.message,
+                        status = result.status,
+                        onDismiss = { iapStore.clearStatusMessage() }
+                    )
+                }
+            }
             
             // Loading State
             if (status.isLoading) {
@@ -281,8 +290,11 @@ fun SubscriptionFlowScreen(
                             // Prevent re-purchase if already subscribed
                             val alreadySubscribed = purchases.any { it.productId == product.id && it.purchaseState == OpenIapPurchase.PurchaseState.PURCHASED }
                             if (alreadySubscribed) {
-                                showError = true
-                                errorMessage = "Already subscribed to ${product.id}"
+                                iapStore.postStatusMessage(
+                                    message = "Already subscribed to ${product.id}",
+                                    status = PurchaseResultStatus.INFO,
+                                    productId = product.id
+                                )
                                 return@ProductCard
                             }
                             scope.launch {
@@ -290,7 +302,7 @@ fun SubscriptionFlowScreen(
                                     ProductRequest.ProductRequestType.SUBS else ProductRequest.ProductRequestType.INAPP
                                 iapStore.setActivity(activity)
                                 iapStore.requestPurchase(
-                                    params = RequestPurchaseAndroidProps(skus = listOf(product.id)),
+                                    params = RequestPurchaseParams(skus = listOf(product.id)),
                                     type = reqType
                                 )
                             }
@@ -371,8 +383,11 @@ fun SubscriptionFlowScreen(
             // 1) Server-side validation (replace with your backend call)
             val valid = validateReceiptOnServer(purchase)
             if (!valid) {
-                showError = true
-                errorMessage = "Receipt validation failed"
+                iapStore.postStatusMessage(
+                    message = "Receipt validation failed",
+                    status = PurchaseResultStatus.ERROR,
+                    productId = purchase.productId
+                )
                 return@LaunchedEffect
             }
             // 2) Determine consumable vs non-consumable (subs -> false)
@@ -394,33 +409,23 @@ fun SubscriptionFlowScreen(
             // 4) Finish transaction
             val ok = iapStore.finishTransaction(purchase, isConsumable)
             if (!ok) {
-                showError = true
-                errorMessage = "finishTransaction failed"
+                iapStore.postStatusMessage(
+                    message = "finishTransaction failed",
+                    status = PurchaseResultStatus.ERROR,
+                    productId = purchase.productId
+                )
             } else {
                 iapStore.loadPurchases()
             }
         } catch (e: Exception) {
-            showError = true
-            errorMessage = e.message ?: "Failed to finish purchase"
+            iapStore.postStatusMessage(
+                message = e.message ?: "Failed to finish purchase",
+                status = PurchaseResultStatus.ERROR,
+                productId = purchase.productId
+            )
         }
     }
 
-    
-    
-    // Error Dialog
-    if (showError) {
-        AlertDialog(
-            onDismissRequest = { showError = false },
-            title = { Text("Error") },
-            text = { Text(errorMessage) },
-            confirmButton = {
-                TextButton(onClick = { showError = false }) {
-                    Text("OK")
-                }
-            }
-        )
-    }
-    
     // Product Detail Modal
     selectedProduct?.let { product ->
         ProductDetailModal(
@@ -432,7 +437,7 @@ fun SubscriptionFlowScreen(
                         ProductRequest.ProductRequestType.SUBS else ProductRequest.ProductRequestType.INAPP
                     iapStore.setActivity(activity)
                     iapStore.requestPurchase(
-                        params = RequestPurchaseAndroidProps(skus = listOf(product.id)),
+                        params = RequestPurchaseParams(skus = listOf(product.id)),
                         type = reqType
                     )
                 }

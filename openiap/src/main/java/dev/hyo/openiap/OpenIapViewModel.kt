@@ -28,8 +28,7 @@ class OpenIapViewModel(app: Application) : AndroidViewModel(app) {
 
     fun restorePurchases() { viewModelScope.launch { runCatching { store.restorePurchases() } } }
 
-    fun requestPurchase(params: RequestPurchaseAndroidProps, type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.INAPP) {
+    fun requestPurchase(params: RequestPurchaseParams, type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.INAPP) {
         viewModelScope.launch { runCatching { store.requestPurchase(params, type) } }
     }
 }
-

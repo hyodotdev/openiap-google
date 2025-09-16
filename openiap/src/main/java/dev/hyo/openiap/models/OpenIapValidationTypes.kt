@@ -30,9 +30,9 @@ data class ReceiptValidationResultAndroid(
  */
 data class ReceiptValidationProps(
     val sku: String,
-    val androidOptions: AndroidValidationOptions? = null
+    val androidOptions: ReceiptValidationAndroidOptions? = null
 ) {
-    data class AndroidValidationOptions(
+    data class ReceiptValidationAndroidOptions(
         val packageName: String,
         val productToken: String,
         val accessToken: String,
