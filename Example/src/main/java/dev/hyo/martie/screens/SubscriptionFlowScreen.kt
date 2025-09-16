@@ -127,7 +127,7 @@ fun SubscriptionFlowScreen(
                     println("SubscriptionFlow: Loading subscription products: ${IapConstants.subsSkus()}")
                     iapStore.fetchProducts(
                         skus = IapConstants.subsSkus(),
-                        type = ProductRequest.ProductRequestType.SUBS
+                        type = ProductRequest.ProductRequestType.Subs
                     )
                     iapStore.getAvailablePurchases()
                 }
@@ -161,7 +161,7 @@ fun SubscriptionFlowScreen(
                                     iapStore.setActivity(activity)
                     iapStore.fetchProducts(
                         skus = IapConstants.subsSkus(),
-                        type = ProductRequest.ProductRequestType.SUBS
+                        type = ProductRequest.ProductRequestType.Subs
                     )
                                 } catch (_: Exception) { }
                             }
@@ -291,21 +291,21 @@ fun SubscriptionFlowScreen(
                     ProductCard(
                         product = product,
                         isPurchasing = status.isPurchasing(product.id),
-                        isSubscribed = purchases.any { it.productId == product.id && it.purchaseState == OpenIapPurchase.PurchaseState.PURCHASED },
+                        isSubscribed = purchases.any { it.productId == product.id && it.purchaseState == OpenIapPurchase.PurchaseState.Purchased },
                         onPurchase = {
                             // Prevent re-purchase if already subscribed
-                            val alreadySubscribed = purchases.any { it.productId == product.id && it.purchaseState == OpenIapPurchase.PurchaseState.PURCHASED }
+                            val alreadySubscribed = purchases.any { it.productId == product.id && it.purchaseState == OpenIapPurchase.PurchaseState.Purchased }
                             if (alreadySubscribed) {
                                 iapStore.postStatusMessage(
                                     message = "Already subscribed to ${product.id}",
-                                    status = PurchaseResultStatus.INFO,
+                                    status = PurchaseResultStatus.Info,
                                     productId = product.id
                                 )
                                 return@ProductCard
                             }
                             scope.launch {
-                                val reqType = if (product.type == OpenIapProduct.ProductType.SUBS)
-                                    ProductRequest.ProductRequestType.SUBS else ProductRequest.ProductRequestType.INAPP
+                                val reqType = if (product.type == OpenIapProduct.ProductType.Subs)
+                                    ProductRequest.ProductRequestType.Subs else ProductRequest.ProductRequestType.InApp
                                 iapStore.setActivity(activity)
                                 iapStore.requestPurchase(
                                     params = RequestPurchaseParams(skus = listOf(product.id)),
@@ -391,7 +391,7 @@ fun SubscriptionFlowScreen(
             if (!valid) {
                 iapStore.postStatusMessage(
                     message = "Receipt validation failed",
-                    status = PurchaseResultStatus.ERROR,
+                    status = PurchaseResultStatus.Error,
                     productId = purchase.productId
                 )
                 return@LaunchedEffect
@@ -399,7 +399,7 @@ fun SubscriptionFlowScreen(
             // 2) Determine consumable vs non-consumable (subs -> false)
             val product = products.find { it.id == purchase.productId }
             val isConsumable = product?.let {
-                it.type == OpenIapProduct.ProductType.INAPP &&
+                it.type == OpenIapProduct.ProductType.InApp &&
                         (it.id.contains("consumable", true) || it.id.contains("bulb", true))
             } == true
 
@@ -417,7 +417,7 @@ fun SubscriptionFlowScreen(
             if (!ok) {
                 iapStore.postStatusMessage(
                     message = "finishTransaction failed",
-                    status = PurchaseResultStatus.ERROR,
+                    status = PurchaseResultStatus.Error,
                     productId = purchase.productId
                 )
             } else {
@@ -426,7 +426,7 @@ fun SubscriptionFlowScreen(
         } catch (e: Exception) {
             iapStore.postStatusMessage(
                 message = e.message ?: "Failed to finish purchase",
-                status = PurchaseResultStatus.ERROR,
+                status = PurchaseResultStatus.Error,
                 productId = purchase.productId
             )
         }
@@ -439,8 +439,8 @@ fun SubscriptionFlowScreen(
             onDismiss = { selectedProduct = null },
             onPurchase = {
                 uiScope.launch {
-                    val reqType = if (product.type == OpenIapProduct.ProductType.SUBS)
-                        ProductRequest.ProductRequestType.SUBS else ProductRequest.ProductRequestType.INAPP
+                    val reqType = if (product.type == OpenIapProduct.ProductType.Subs)
+                        ProductRequest.ProductRequestType.Subs else ProductRequest.ProductRequestType.InApp
                     iapStore.setActivity(activity)
                     iapStore.requestPurchase(
                         params = RequestPurchaseParams(skus = listOf(product.id)),

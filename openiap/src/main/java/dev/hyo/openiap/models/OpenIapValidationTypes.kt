@@ -15,7 +15,7 @@ data class ReceiptValidationResultAndroid(
     val gracePeriodEndDate: Long,
     val parentProductId: String,
     val productId: String,
-    val productType: String, // "inapp" or "subs"
+    val productType: String, // "in-app" or "subs" ("inapp" legacy support)
     val purchaseDate: Long,
     val quantity: Int,
     val receiptId: String,
@@ -39,4 +39,3 @@ data class ReceiptValidationProps(
         val isSub: Boolean = false
     )
 }
-

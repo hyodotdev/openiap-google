@@ -52,7 +52,7 @@ class OpenIapStore(private val module: OpenIapProtocol) {
         _currentPurchase.value = purchase
         setStatusMessage(
             message = "Purchase successful",
-            status = PurchaseResultStatus.SUCCESS,
+            status = PurchaseResultStatus.Success,
             productId = purchase.productId,
             transactionId = purchase.id
         )
@@ -64,7 +64,7 @@ class OpenIapStore(private val module: OpenIapProtocol) {
             val message = OpenIapError.defaultMessage(OpenIapError.UserCancelled.CODE)
             setStatusMessage(
                 message = message,
-                status = PurchaseResultStatus.INFO,
+                status = PurchaseResultStatus.Info,
                 productId = pendingRequestProductId
             )
             _status.value = _status.value.copy(lastError = null)
@@ -75,7 +75,7 @@ class OpenIapStore(private val module: OpenIapProtocol) {
         val message = error.message?.takeIf { it.isNotBlank() } ?: OpenIapError.defaultMessage(code)
         setStatusMessage(
             message = message,
-            status = PurchaseResultStatus.ERROR,
+            status = PurchaseResultStatus.Error,
             productId = pendingRequestProductId,
             code = code
         )
@@ -145,7 +145,7 @@ class OpenIapStore(private val module: OpenIapProtocol) {
     // -------------------------------------------------------------------------
     suspend fun fetchProducts(
         skus: List<String>,
-        type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.ALL
+        type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.All
     ): List<OpenIapProduct> {
         setLoading { it.fetchProducts = true }
         return try {
@@ -189,7 +189,7 @@ class OpenIapStore(private val module: OpenIapProtocol) {
     // -------------------------------------------------------------------------
     suspend fun requestPurchase(
         params: RequestPurchaseParams,
-        type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.INAPP
+        type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.InApp
     ): List<OpenIapPurchase> {
         val skuForStatus = params.skus.firstOrNull()
         if (skuForStatus != null) {
@@ -255,7 +255,7 @@ class OpenIapStore(private val module: OpenIapProtocol) {
 
     private fun setError(message: String?) {
         val msg = message ?: "Operation failed"
-        setStatusMessage(msg, PurchaseResultStatus.ERROR)
+        setStatusMessage(msg, PurchaseResultStatus.Error)
         _status.value = _status.value.copy(lastError = message?.let {
             ErrorData(code = "ERROR", message = it)
         })
@@ -286,7 +286,7 @@ class OpenIapStore(private val module: OpenIapProtocol) {
     ) {
         setStatusMessage(message, status, productId)
         _status.value = _status.value.copy(
-            lastError = if (status == PurchaseResultStatus.ERROR) {
+            lastError = if (status == PurchaseResultStatus.Error) {
                 ErrorData(code = "ERROR", message = message)
             } else {
                 null
@@ -361,12 +361,12 @@ data class PurchaseResultData(
     val productId: String?,
     val transactionId: String?,
     val message: String,
-    val status: PurchaseResultStatus = PurchaseResultStatus.SUCCESS,
+    val status: PurchaseResultStatus = PurchaseResultStatus.Success,
     val code: String? = null,
     val timestamp: Long = System.currentTimeMillis()
 )
 
-enum class PurchaseResultStatus { SUCCESS, INFO, ERROR }
+enum class PurchaseResultStatus { Success, Info, Error }
 
 data class ErrorData(
     val code: String,
@@ -382,5 +382,13 @@ data class IapOperation(
     val result: IapOperationResult? = null
 )
 
-enum class IapOperationType { INIT_CONNECTION, END_CONNECTION, FETCH_PRODUCTS, REQUEST_PURCHASE, FINISH_TRANSACTION, RESTORE_PURCHASES, VALIDATE_RECEIPT }
+enum class IapOperationType {
+    InitConnection,
+    EndConnection,
+    FetchProducts,
+    RequestPurchase,
+    FinishTransaction,
+    RestorePurchases,
+    ValidateReceipt,
+}
 sealed class IapOperationResult { object Success : IapOperationResult(); data class Failure(val message: String) : IapOperationResult(); object Cancelled : IapOperationResult() }

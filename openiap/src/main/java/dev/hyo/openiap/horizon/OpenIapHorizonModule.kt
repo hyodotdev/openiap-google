@@ -100,9 +100,9 @@ class OpenIapHorizonModule(
         }
 
         when (params.type) {
-            ProductRequest.ProductRequestType.ALL -> { query(BillingClient.ProductType.INAPP); query(BillingClient.ProductType.SUBS) }
-            ProductRequest.ProductRequestType.INAPP -> query(BillingClient.ProductType.INAPP)
-            ProductRequest.ProductRequestType.SUBS -> query(BillingClient.ProductType.SUBS)
+            ProductRequest.ProductRequestType.All -> { query(BillingClient.ProductType.INAPP); query(BillingClient.ProductType.SUBS) }
+            ProductRequest.ProductRequestType.InApp -> query(BillingClient.ProductType.INAPP)
+            ProductRequest.ProductRequestType.Subs -> query(BillingClient.ProductType.SUBS)
         }
         results
     }
@@ -157,7 +157,7 @@ class OpenIapHorizonModule(
     ): List<OpenIapPurchase> = withContext(Dispatchers.IO) {
         val client = billingClient ?: throw OpenIapError.NotPrepared
         val activity = currentActivity ?: throw OpenIapError.MissingCurrentActivity
-        val desiredType = if (type == ProductRequest.ProductRequestType.SUBS) BillingClient.ProductType.SUBS else BillingClient.ProductType.INAPP
+        val desiredType = if (type == ProductRequest.ProductRequestType.Subs) BillingClient.ProductType.SUBS else BillingClient.ProductType.INAPP
         if (request.skus.isEmpty()) throw OpenIapError.EmptySkuList
 
         val products = request.skus.map { sku ->
@@ -293,7 +293,7 @@ class OpenIapHorizonModule(
             id = details.productId,
             title = details.title,
             description = details.description,
-            type = if (productType == BillingClient.ProductType.SUBS) OpenIapProduct.ProductType.SUBS else OpenIapProduct.ProductType.INAPP,
+            type = if (productType == BillingClient.ProductType.SUBS) OpenIapProduct.ProductType.Subs else OpenIapProduct.ProductType.InApp,
             displayName = details.name,
             displayPrice = displayPrice,
             currency = currency,
@@ -341,7 +341,7 @@ class OpenIapHorizonModule(
             purchaseToken = purchase.purchaseToken,
             platform = "android",
             quantity = purchase.quantity,
-            purchaseState = OpenIapPurchase.PurchaseState.PURCHASED,
+            purchaseState = OpenIapPurchase.PurchaseState.Purchased,
             isAutoRenewing = purchase.isAutoRenewing(),
             purchaseTokenAndroid = purchase.purchaseToken,
             dataAndroid = purchase.originalJson,

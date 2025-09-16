@@ -5,16 +5,28 @@ package dev.hyo.openiap.models
  */
 data class OpenIapProductRequest(
     val skus: List<String>,
-    val type: ProductRequestType = ProductRequestType.INAPP
+    val type: ProductRequestType = ProductRequestType.InApp
 ) {
     enum class ProductRequestType(val value: String) {
-        INAPP("inapp"),
-        SUBS("subs"),
-        ALL("all");
+        InApp("in-app"),
+        Subs("subs"),
+        All("all");
 
         companion object {
-            fun fromString(value: String): ProductRequestType =
-                values().find { it.value == value } ?: INAPP
+            private val INAPP_ALIASES = setOf(
+                "in-app",
+                "inapp", // Legacy alias slated for removal in 1.2.0
+            )
+
+            fun fromString(value: String): ProductRequestType {
+                val normalized = value.lowercase()
+                return when {
+                    normalized in INAPP_ALIASES -> InApp
+                    normalized == Subs.value -> Subs
+                    normalized == All.value -> All
+                    else -> InApp
+                }
+            }
         }
     }
 }

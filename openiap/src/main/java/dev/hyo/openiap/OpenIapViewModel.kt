@@ -22,13 +22,13 @@ class OpenIapViewModel(app: Application) : AndroidViewModel(app) {
     fun initConnection() { viewModelScope.launch { runCatching { store.initConnection() } } }
     fun endConnection() { viewModelScope.launch { runCatching { store.endConnection() } } }
 
-    fun fetchProducts(skus: List<String>, type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.ALL) {
+    fun fetchProducts(skus: List<String>, type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.All) {
         viewModelScope.launch { runCatching { store.fetchProducts(skus, type) } }
     }
 
     fun restorePurchases() { viewModelScope.launch { runCatching { store.restorePurchases() } } }
 
-    fun requestPurchase(params: RequestPurchaseParams, type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.INAPP) {
+    fun requestPurchase(params: RequestPurchaseParams, type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.InApp) {
         viewModelScope.launch { runCatching { store.requestPurchase(params, type) } }
     }
 }
