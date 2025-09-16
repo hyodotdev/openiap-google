@@ -42,23 +42,46 @@ class OpenIapStore(private val module: OpenIapProtocol) {
     private val processedPurchaseTokens = mutableSetOf<String>()
 
     // Keep listener references to support proper removal
+    private var pendingRequestProductId: String? = null
+
     private val purchaseUpdateListener = OpenIapPurchaseUpdateListener { purchase ->
         _currentPurchase.value = purchase
-        _status.value = _status.value.copy(
-            lastPurchaseResult = PurchaseResultData(
-                productId = purchase.productId,
-                transactionId = purchase.id,
-                message = "Purchase successful"
-            )
+        setStatusMessage(
+            message = "Purchase successful",
+            status = PurchaseResultStatus.SUCCESS,
+            productId = purchase.productId,
+            transactionId = purchase.id
         )
+        _status.value = _status.value.copy(lastError = null)
+        pendingRequestProductId = null
     }
     private val purchaseErrorListener = OpenIapPurchaseErrorListener { error ->
+        if (error is OpenIapError.UserCancelled || error is OpenIapError.PurchaseCancelled) {
+            val message = OpenIapError.defaultMessage(OpenIapError.UserCancelled.CODE)
+            setStatusMessage(
+                message = message,
+                status = PurchaseResultStatus.INFO,
+                productId = pendingRequestProductId
+            )
+            _status.value = _status.value.copy(lastError = null)
+            pendingRequestProductId = null
+            return@OpenIapPurchaseErrorListener
+        }
+        val code = OpenIapError.toCode(error)
+        val message = error.message?.takeIf { it.isNotBlank() } ?: OpenIapError.defaultMessage(code)
+        setStatusMessage(
+            message = message,
+            status = PurchaseResultStatus.ERROR,
+            productId = pendingRequestProductId,
+            code = code
+        )
         _status.value = _status.value.copy(
             lastError = ErrorData(
-                code = OpenIapError.toCode(error),
-                message = error.message
+                code = code,
+                message = message
             )
         )
+        pendingRequestProductId = null
     }
 
     // Expose a way to set the current Activity for purchase flows
@@ -79,6 +102,7 @@ class OpenIapStore(private val module: OpenIapProtocol) {
         module.removePurchaseUpdateListener(purchaseUpdateListener)
         module.removePurchaseErrorListener(purchaseErrorListener)
         processedPurchaseTokens.clear()
+        pendingRequestProductId = null
     }
 
     // -------------------------------------------------------------------------
@@ -157,11 +181,14 @@ class OpenIapStore(private val module: OpenIapProtocol) {
     // Purchase Flow
     // -------------------------------------------------------------------------
     suspend fun requestPurchase(
-        params: RequestPurchaseAndroidProps,
+        params: RequestPurchaseParams,
         type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.INAPP
     ): List<OpenIapPurchase> {
         val skuForStatus = params.skus.firstOrNull()
-        if (skuForStatus != null) addPurchasing(skuForStatus)
+        if (skuForStatus != null) {
+            addPurchasing(skuForStatus)
+            pendingRequestProductId = skuForStatus
+        }
         return try {
             module.requestPurchase(params, type)
         } finally {
@@ -220,9 +247,48 @@ class OpenIapStore(private val module: OpenIapProtocol) {
     }
 
     private fun setError(message: String?) {
+        val msg = message ?: "Operation failed"
+        setStatusMessage(msg, PurchaseResultStatus.ERROR)
         _status.value = _status.value.copy(lastError = message?.let {
             ErrorData(code = "ERROR", message = it)
         })
+    }
+
+    private fun setStatusMessage(
+        message: String,
+        status: PurchaseResultStatus,
+        productId: String? = null,
+        transactionId: String? = null,
+        code: String? = null
+    ) {
+        _status.value = _status.value.copy(
+            lastPurchaseResult = PurchaseResultData(
+                productId = productId,
+                transactionId = transactionId,
+                message = message,
+                status = status,
+                code = code
+            )
+        )
+    }
+
+    fun postStatusMessage(
+        message: String,
+        status: PurchaseResultStatus,
+        productId: String? = null
+    ) {
+        setStatusMessage(message, status, productId)
+        _status.value = _status.value.copy(
+            lastError = if (status == PurchaseResultStatus.ERROR) {
+                ErrorData(code = "ERROR", message = message)
+            } else {
+                null
+            }
+        )
+    }
+
+    fun clearStatusMessage() {
+        _status.value = _status.value.copy(lastPurchaseResult = null)
     }
 
     private fun addPurchasing(productId: String) {
@@ -263,11 +329,15 @@ data class LoadingStates(
 )
 
 data class PurchaseResultData(
-    val productId: String,
-    val transactionId: String,
+    val productId: String?,
+    val transactionId: String?,
     val message: String,
+    val status: PurchaseResultStatus = PurchaseResultStatus.SUCCESS,
+    val code: String? = null,
     val timestamp: Long = System.currentTimeMillis()
 )
+
+enum class PurchaseResultStatus { SUCCESS, INFO, ERROR }
 
 data class ErrorData(
     val code: String,

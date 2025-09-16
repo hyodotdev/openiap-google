@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,6 +31,7 @@ import dev.hyo.openiap.OpenIapError
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import dev.hyo.openiap.models.OpenIapSerialization
+import dev.hyo.openiap.store.PurchaseResultStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,12 +50,7 @@ fun PurchaseFlowScreen(
     val lastPurchase by iapStore.currentPurchase.collectAsState(initial = null)
     val connectionStatus by iapStore.connectionStatus.collectAsState()
     val clipboard = LocalClipboardManager.current
-    
-    var showPurchaseResult by remember { mutableStateOf(false) }
-    var purchaseResultMessage by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
-    
+    val statusMessage = status.lastPurchaseResult
     // Modal states
     var selectedProduct by remember { mutableStateOf<OpenIapProduct?>(null) }
     var selectedPurchase by remember { mutableStateOf<OpenIapPurchase?>(null) }
@@ -89,7 +86,7 @@ fun PurchaseFlowScreen(
                 title = { Text("Purchase Flow") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -182,12 +179,47 @@ fun PurchaseFlowScreen(
                 }
             }
             
+            statusMessage?.let { result ->
+                item("status-message") {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PurchaseResultCard(
+                            message = result.message,
+                            status = result.status,
+                            onDismiss = { iapStore.clearStatusMessage() }
+                        )
+                        if (result.status == PurchaseResultStatus.SUCCESS) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        lastPurchase?.let { p ->
+                                            val json = OpenIapSerialization.toJson(p)
+                                            clipboard.setText(AnnotatedString(json))
+                                        }
+                                    },
+                                    enabled = lastPurchase != null
+                                ) { Text("Copy Result") }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                OutlinedButton(
+                                    onClick = { selectedPurchase = lastPurchase },
+                                    enabled = lastPurchase != null
+                                ) { Text("Details") }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Products Section
             if (products.isNotEmpty()) {
                 item {
                     SectionHeaderView(title = "Available Products")
                 }
-                
+
                 items(products) { product ->
                     ProductCard(
                         product = product,
@@ -198,7 +230,7 @@ fun PurchaseFlowScreen(
                                     ProductRequest.ProductRequestType.SUBS else ProductRequest.ProductRequestType.INAPP
                                 iapStore.setActivity(activity)
                                 iapStore.requestPurchase(
-                                    params = RequestPurchaseAndroidProps(skus = listOf(product.id)),
+                                    params = RequestPurchaseParams(skus = listOf(product.id)),
                                     type = reqType
                                 )
                             }
@@ -217,39 +249,6 @@ fun PurchaseFlowScreen(
                         message = "No products available",
                         icon = Icons.Default.ShoppingBag
                     )
-                }
-            }
-            
-            // Purchase Result
-            if (showPurchaseResult) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PurchaseResultCard(
-                            message = purchaseResultMessage,
-                            onDismiss = { showPurchaseResult = false }
-                        )
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            OutlinedButton(
-                                onClick = {
-                                    lastPurchase?.let { p ->
-                                        val json = OpenIapSerialization.toJson(p)
-                                        clipboard.setText(AnnotatedString(json))
-                                    }
-                                },
-                                enabled = lastPurchase != null
-                            ) { Text("Copy Result") }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            OutlinedButton(
-                                onClick = { selectedPurchase = lastPurchase },
-                                enabled = lastPurchase != null
-                            ) { Text("Details") }
-                        }
-                    }
                 }
             }
             
@@ -287,11 +286,15 @@ fun PurchaseFlowScreen(
                             scope.launch {
                                 try {
                                     val restored = iapStore.restorePurchases()
-                                    showPurchaseResult = true
-                                    purchaseResultMessage = "Restored ${restored.size} purchases"
+                                    iapStore.postStatusMessage(
+                                        message = "Restored ${restored.size} purchases",
+                                        status = PurchaseResultStatus.SUCCESS
+                                    )
                                 } catch (e: Exception) {
-                                    showError = true
-                                    errorMessage = e.message ?: "Restore failed"
+                                    iapStore.postStatusMessage(
+                                        message = e.message ?: "Restore failed",
+                                        status = PurchaseResultStatus.ERROR
+                                    )
                                 }
                             }
                         },
@@ -341,8 +344,11 @@ fun PurchaseFlowScreen(
             // 1) Server-side validation (replace with your backend call)
             val valid = validateReceiptOnServer(purchase)
             if (!valid) {
-                showError = true
-                errorMessage = "Receipt validation failed"
+                iapStore.postStatusMessage(
+                    message = "Receipt validation failed",
+                    status = PurchaseResultStatus.ERROR,
+                    productId = purchase.productId
+                )
                 return@LaunchedEffect
             }
             // 2) Determine consumable vs non-consumable
@@ -364,34 +370,29 @@ fun PurchaseFlowScreen(
             // 4) Finish transaction
             val ok = iapStore.finishTransaction(purchase, isConsumable)
             if (!ok) {
-                showError = true
-                errorMessage = "finishTransaction failed"
+                iapStore.postStatusMessage(
+                    message = "finishTransaction failed",
+                    status = PurchaseResultStatus.ERROR,
+                    productId = purchase.productId
+                )
             } else {
                 iapStore.loadPurchases()
-                showPurchaseResult = true
-                purchaseResultMessage = "Purchase finished successfully"
+                iapStore.postStatusMessage(
+                    message = "Purchase finished successfully",
+                    status = PurchaseResultStatus.SUCCESS,
+                    productId = purchase.productId
+                )
                 selectedProduct = null
             }
         } catch (e: Exception) {
-            showError = true
-            errorMessage = e.message ?: "Failed to finish purchase"
+            iapStore.postStatusMessage(
+                message = e.message ?: "Failed to finish purchase",
+                status = PurchaseResultStatus.ERROR,
+                productId = purchase.productId
+            )
         }
     }
 
-    // Error Dialog
-    if (showError) {
-        AlertDialog(
-            onDismissRequest = { showError = false },
-            title = { Text("Error") },
-            text = { Text(errorMessage) },
-            confirmButton = {
-                TextButton(onClick = { showError = false }) {
-                    Text("OK")
-                }
-            }
-        )
-    }
-    
     // Product Detail Modal
     selectedProduct?.let { product ->
         ProductDetailModal(
@@ -403,7 +404,7 @@ fun PurchaseFlowScreen(
                         ProductRequest.ProductRequestType.SUBS else ProductRequest.ProductRequestType.INAPP
                     iapStore.setActivity(activity)
                     iapStore.requestPurchase(
-                        params = RequestPurchaseAndroidProps(skus = listOf(product.id)),
+                        params = RequestPurchaseParams(skus = listOf(product.id)),
                         type = reqType
                     )
                 }

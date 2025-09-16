@@ -5,24 +5,33 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.hyo.martie.models.AppColors
+import dev.hyo.openiap.store.PurchaseResultStatus
 
 @Composable
 fun PurchaseResultCard(
     message: String,
+    status: PurchaseResultStatus,
     onDismiss: () -> Unit
 ) {
+    val (background, contentColor, icon) = when (status) {
+        PurchaseResultStatus.SUCCESS -> Triple(AppColors.success.copy(alpha = 0.1f), AppColors.success, Icons.Default.CheckCircle)
+        PurchaseResultStatus.INFO -> Triple(AppColors.info.copy(alpha = 0.1f), AppColors.info, Icons.Default.Info)
+        PurchaseResultStatus.ERROR -> Triple(AppColors.danger.copy(alpha = 0.1f), AppColors.danger, Icons.Default.ErrorOutline)
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = AppColors.success.copy(alpha = 0.1f)
+            containerColor = background
         )
     ) {
         Row(
@@ -35,16 +44,11 @@ fun PurchaseResultCard(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = AppColors.success,
-                    modifier = Modifier.size(24.dp)
-                )
+                Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(24.dp))
                 Text(
                     message,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = AppColors.success
+                    color = contentColor
                 )
             }
             IconButton(onClick = onDismiss) {

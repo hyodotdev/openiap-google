@@ -2,9 +2,9 @@ package dev.hyo.openiap.models
 
 /**
  * Android-specific purchase request parameters
- * Based on openiap.dev RequestPurchaseAndroidProps
+ * Based on openiap.dev RequestPurchaseParams
  */
-data class RequestPurchaseAndroidProps(
+data class RequestPurchaseParams(
     val skus: List<String>,
     val obfuscatedAccountIdAndroid: String? = null,
     val obfuscatedProfileIdAndroid: String? = null,

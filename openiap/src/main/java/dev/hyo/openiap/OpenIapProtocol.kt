@@ -81,7 +81,7 @@ interface OpenIapProtocol {
      * @return Purchase object if successful, null if cancelled
      */
     suspend fun requestPurchase(
-        request: RequestPurchaseAndroidProps,
+        request: RequestPurchaseParams,
         type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.INAPP
     ): List<OpenIapPurchase>
     
