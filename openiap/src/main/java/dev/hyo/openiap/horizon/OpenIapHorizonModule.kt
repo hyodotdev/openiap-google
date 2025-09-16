@@ -34,7 +34,12 @@ class OpenIapHorizonModule(
             try {
                 val builder = BillingClient.newBuilder(context)
                     .setListener(this@OpenIapHorizonModule)
-                    .enablePendingPurchases()
+                    .enablePendingPurchases(
+                        PendingPurchasesParams
+                            .newBuilder()
+                            .enableOneTimeProducts()
+                            .build()
+                    )
                 if (!appId.isNullOrEmpty()) builder.setAppId(appId)
                 billingClient = builder.build()
                 billingClient?.startConnection(object : BillingClientStateListener {
@@ -147,7 +152,7 @@ class OpenIapHorizonModule(
         getAvailablePurchases(null).filter { it.productId.isNotEmpty() }
 
     override suspend fun requestPurchase(
-        request: RequestPurchaseAndroidProps,
+        request: RequestPurchaseParams,
         type: ProductRequest.ProductRequestType,
     ): List<OpenIapPurchase> = withContext(Dispatchers.IO) {
         val client = billingClient ?: throw OpenIapError.NotPrepared
@@ -166,7 +171,7 @@ class OpenIapHorizonModule(
             }
             client.queryProductDetailsAsync(q) { br, pd ->
                 if (br.responseCode != BillingClient.BillingResponseCode.OK) {
-                    purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(OpenIapError.QueryProduct(br.debugMessage ?: "Query failed")) } }
+                    purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(OpenIapError.QueryProduct()) } }
                     if (cont.isActive) cont.resume(emptyList())
                     return@queryProductDetailsAsync
                 }
@@ -193,7 +198,7 @@ class OpenIapHorizonModule(
                     .build()
                 val r = client.launchBillingFlow(activity, flow)
                 if (r.responseCode != BillingClient.BillingResponseCode.OK) {
-                    purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(OpenIapError.PurchaseFailed(r.debugMessage ?: "Billing flow failed")) } }
+                    purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(OpenIapError.PurchaseFailed()) } }
                     if (cont.isActive) cont.resume(emptyList())
                 }
                 // Wait for onPurchasesUpdated to deliver
@@ -258,7 +263,7 @@ class OpenIapHorizonModule(
                 BillingClient.BillingResponseCode.USER_CANCELED -> OpenIapError.UserCancelled
                 BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> OpenIapError.ItemAlreadyOwned
                 BillingClient.BillingResponseCode.ITEM_NOT_OWNED -> OpenIapError.ItemNotOwned
-                else -> OpenIapError.PurchaseFailed(billingResult.debugMessage ?: "Horizon purchase failed")
+                else -> OpenIapError.PurchaseFailed()
             }
             purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
             currentPurchaseCallback?.invoke(Result.success(emptyList()))
