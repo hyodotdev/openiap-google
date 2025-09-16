@@ -77,7 +77,7 @@ fun ProductDetailModal(
                     }
                 }
                 
-                Divider()
+                HorizontalDivider()
                 
                 // Product Info
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -126,7 +126,7 @@ fun ProductDetailModal(
                         Surface(
                             shape = RoundedCornerShape(8.dp),
                             color = when (product.type) {
-                                OpenIapProduct.ProductType.SUBS -> AppColors.secondary
+                                OpenIapProduct.ProductType.Subs -> AppColors.secondary
                                 else -> AppColors.primary
                             }.copy(alpha = 0.2f)
                         ) {
@@ -136,7 +136,7 @@ fun ProductDetailModal(
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = when (product.type) {
-                                    OpenIapProduct.ProductType.SUBS -> AppColors.secondary
+                                    OpenIapProduct.ProductType.Subs -> AppColors.secondary
                                     else -> AppColors.primary
                                 }
                             )
@@ -173,7 +173,7 @@ fun ProductDetailModal(
                         }
                         
                         product.oneTimePurchaseOfferDetailsAndroid?.let { offer ->
-                            Divider(modifier = Modifier.padding(vertical = 4.dp))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                             Text(
                                 "One-Time Purchase Details",
                                 style = MaterialTheme.typography.labelLarge,
@@ -185,7 +185,7 @@ fun ProductDetailModal(
                         
                         product.subscriptionOfferDetailsAndroid?.let { offers ->
                             if (offers.isNotEmpty()) {
-                                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                                 Text(
                                     "Subscription Offers",
                                     style = MaterialTheme.typography.labelLarge,
@@ -312,7 +312,7 @@ fun PurchaseDetailModal(
                     }
                 }
                 
-                Divider()
+                HorizontalDivider()
                 
                 // Purchase Status
                 Row(
@@ -322,16 +322,16 @@ fun PurchaseDetailModal(
                 ) {
                     Icon(
                         when (purchase.purchaseState) {
-                            OpenIapPurchase.PurchaseState.PURCHASED -> Icons.Default.CheckCircle
-                            OpenIapPurchase.PurchaseState.PENDING -> Icons.Default.Schedule
-                            OpenIapPurchase.PurchaseState.FAILED -> Icons.Default.Error
+                            OpenIapPurchase.PurchaseState.Purchased -> Icons.Default.CheckCircle
+                            OpenIapPurchase.PurchaseState.Pending -> Icons.Default.Schedule
+                            OpenIapPurchase.PurchaseState.Failed -> Icons.Default.Error
                             else -> Icons.Default.Info
                         },
                         contentDescription = null,
                         tint = when (purchase.purchaseState) {
-                            OpenIapPurchase.PurchaseState.PURCHASED -> AppColors.success
-                            OpenIapPurchase.PurchaseState.PENDING -> AppColors.warning
-                            OpenIapPurchase.PurchaseState.FAILED -> AppColors.danger
+                            OpenIapPurchase.PurchaseState.Purchased -> AppColors.success
+                            OpenIapPurchase.PurchaseState.Pending -> AppColors.warning
+                            OpenIapPurchase.PurchaseState.Failed -> AppColors.danger
                             else -> AppColors.info
                         },
                         modifier = Modifier.size(32.dp)
@@ -405,7 +405,7 @@ fun PurchaseDetailModal(
                     }
                     
                     // Android specific details
-                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     Text(
                         "Android Details",
                         style = MaterialTheme.typography.labelLarge,
@@ -430,7 +430,7 @@ fun PurchaseDetailModal(
                     
                     // Token info
                     if (!purchase.purchaseToken.isNullOrEmpty()) {
-                        Divider(modifier = Modifier.padding(vertical = 4.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                         Text(
                             "Token Information",
                             style = MaterialTheme.typography.labelLarge,

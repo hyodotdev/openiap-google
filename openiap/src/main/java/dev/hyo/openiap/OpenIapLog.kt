@@ -8,10 +8,10 @@ import java.util.concurrent.atomic.AtomicReference
  * OpenIAP logging utility (Android parity with Apple side).
  * - Toggleable via isEnabled
  * - Optional external handler integration
- * - Level-based routing (DEBUG/INFO/WARN/ERROR)
+ * - Level-based routing (Debug/Info/Warn/Error)
  */
 object OpenIapLog {
-    enum class Level { DEBUG, INFO, WARN, ERROR }
+    enum class Level { Debug, Info, Warn, Error }
 
     private val enabled = AtomicBoolean(false)
     private val defaultTagRef = AtomicReference("OpenIAP")
@@ -31,10 +31,10 @@ object OpenIapLog {
     fun defaultTag(): String = defaultTagRef.get()
 
     // Shorthand APIs (match Apple naming)
-    fun debug(message: String, tag: String = defaultTag()) = log(Level.DEBUG, message, null, tag)
-    fun info(message: String, tag: String = defaultTag()) = log(Level.INFO, message, null, tag)
-    fun warn(message: String, tag: String = defaultTag()) = log(Level.WARN, message, null, tag)
-    fun error(message: String, tr: Throwable? = null, tag: String = defaultTag()) = log(Level.ERROR, message, tr, tag)
+    fun debug(message: String, tag: String = defaultTag()) = log(Level.Debug, message, null, tag)
+    fun info(message: String, tag: String = defaultTag()) = log(Level.Info, message, null, tag)
+    fun warn(message: String, tag: String = defaultTag()) = log(Level.Warn, message, null, tag)
+    fun error(message: String, tr: Throwable? = null, tag: String = defaultTag()) = log(Level.Error, message, tr, tag)
 
     // Backwards-compat alias with Android Log-style letters
     fun d(message: String, tag: String = defaultTag()) = debug(message, tag)
@@ -50,10 +50,10 @@ object OpenIapLog {
             return
         }
         when (level) {
-            Level.DEBUG -> Log.d(tag, message)
-            Level.INFO -> Log.i(tag, message)
-            Level.WARN -> Log.w(tag, message)
-            Level.ERROR -> Log.e(tag, message, tr)
+            Level.Debug -> Log.d(tag, message)
+            Level.Info -> Log.i(tag, message)
+            Level.Warn -> Log.w(tag, message)
+            Level.Error -> Log.e(tag, message, tr)
         }
     }
 }

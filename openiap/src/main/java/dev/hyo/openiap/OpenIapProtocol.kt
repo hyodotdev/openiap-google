@@ -66,7 +66,8 @@ interface OpenIapProtocol {
     ): Boolean
 
     /**
-     * Get available purchases filtered by type (inapp or subs).
+     * Get available purchases filtered by type (`"in-app"` or `"subs"`).
+     * Note: `"inapp"` remains available for compatibility but will be removed in 1.2.0.
      */
     suspend fun getAvailableItems(type: dev.hyo.openiap.models.ProductRequest.ProductRequestType): List<OpenIapPurchase>
 
@@ -77,12 +78,12 @@ interface OpenIapProtocol {
     /**
      * Request a purchase for products or subscriptions.
      * @param request Purchase request parameters
-     * @param type Product type ('inapp' | 'subs'), required for Android
+     * @param type Product type (`"in-app"` | `"subs"`). `"inapp"` is supported until 1.2.0 for backwards compatibility.
      * @return Purchase object if successful, null if cancelled
      */
     suspend fun requestPurchase(
         request: RequestPurchaseParams,
-        type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.INAPP
+        type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.InApp
     ): List<OpenIapPurchase>
     
     /**

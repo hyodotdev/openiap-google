@@ -65,7 +65,7 @@ fun PurchaseFlowScreen(
                     iapStore.setActivity(activity)
                     iapStore.fetchProducts(
                         skus = IapConstants.INAPP_SKUS,
-                        type = ProductRequest.ProductRequestType.INAPP
+                        type = ProductRequest.ProductRequestType.InApp
                     )
                     iapStore.getAvailablePurchases()
                 }
@@ -98,7 +98,7 @@ fun PurchaseFlowScreen(
                                     iapStore.setActivity(activity)
                                     iapStore.fetchProducts(
                                         skus = IapConstants.INAPP_SKUS,
-                                        type = ProductRequest.ProductRequestType.INAPP
+                                        type = ProductRequest.ProductRequestType.InApp
                                     )
                                 } catch (_: Exception) { }
                             }
@@ -187,7 +187,7 @@ fun PurchaseFlowScreen(
                             status = result.status,
                             onDismiss = { iapStore.clearStatusMessage() }
                         )
-                        if (result.status == PurchaseResultStatus.SUCCESS) {
+                        if (result.status == PurchaseResultStatus.Success) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -226,8 +226,8 @@ fun PurchaseFlowScreen(
                         isPurchasing = status.isPurchasing(product.id),
                         onPurchase = {
                             scope.launch {
-                                val reqType = if (product.type == OpenIapProduct.ProductType.SUBS)
-                                    ProductRequest.ProductRequestType.SUBS else ProductRequest.ProductRequestType.INAPP
+                                val reqType = if (product.type == OpenIapProduct.ProductType.Subs)
+                                    ProductRequest.ProductRequestType.Subs else ProductRequest.ProductRequestType.InApp
                                 iapStore.setActivity(activity)
                                 iapStore.requestPurchase(
                                     params = RequestPurchaseParams(skus = listOf(product.id)),
@@ -288,12 +288,12 @@ fun PurchaseFlowScreen(
                                     val restored = iapStore.restorePurchases()
                                     iapStore.postStatusMessage(
                                         message = "Restored ${restored.size} purchases",
-                                        status = PurchaseResultStatus.SUCCESS
+                                        status = PurchaseResultStatus.Success
                                     )
                                 } catch (e: Exception) {
                                     iapStore.postStatusMessage(
                                         message = e.message ?: "Restore failed",
-                                        status = PurchaseResultStatus.ERROR
+                                        status = PurchaseResultStatus.Error
                                     )
                                 }
                             }
@@ -312,7 +312,7 @@ fun PurchaseFlowScreen(
                                 try {
                                     iapStore.fetchProducts(
                                         skus = IapConstants.INAPP_SKUS,
-                                        type = ProductRequest.ProductRequestType.INAPP
+                                        type = ProductRequest.ProductRequestType.InApp
                                     )
                                 } catch (_: Exception) { }
                             }
@@ -346,7 +346,7 @@ fun PurchaseFlowScreen(
             if (!valid) {
                 iapStore.postStatusMessage(
                     message = "Receipt validation failed",
-                    status = PurchaseResultStatus.ERROR,
+                    status = PurchaseResultStatus.Error,
                     productId = purchase.productId
                 )
                 return@LaunchedEffect
@@ -354,7 +354,7 @@ fun PurchaseFlowScreen(
             // 2) Determine consumable vs non-consumable
             val product = products.find { it.id == purchase.productId }
             val isConsumable = product?.let {
-                it.type == OpenIapProduct.ProductType.INAPP &&
+                it.type == OpenIapProduct.ProductType.InApp &&
                         (it.id.contains("consumable", true) || it.id.contains("bulb", true))
             } == true
 
@@ -372,14 +372,14 @@ fun PurchaseFlowScreen(
             if (!ok) {
                 iapStore.postStatusMessage(
                     message = "finishTransaction failed",
-                    status = PurchaseResultStatus.ERROR,
+                    status = PurchaseResultStatus.Error,
                     productId = purchase.productId
                 )
             } else {
                 iapStore.loadPurchases()
                 iapStore.postStatusMessage(
                     message = "Purchase finished successfully",
-                    status = PurchaseResultStatus.SUCCESS,
+                    status = PurchaseResultStatus.Success,
                     productId = purchase.productId
                 )
                 selectedProduct = null
@@ -387,7 +387,7 @@ fun PurchaseFlowScreen(
         } catch (e: Exception) {
             iapStore.postStatusMessage(
                 message = e.message ?: "Failed to finish purchase",
-                status = PurchaseResultStatus.ERROR,
+                status = PurchaseResultStatus.Error,
                 productId = purchase.productId
             )
         }
@@ -400,8 +400,8 @@ fun PurchaseFlowScreen(
             onDismiss = { selectedProduct = null },
             onPurchase = {
                 uiScope.launch {
-                    val reqType = if (product.type == OpenIapProduct.ProductType.SUBS)
-                        ProductRequest.ProductRequestType.SUBS else ProductRequest.ProductRequestType.INAPP
+                    val reqType = if (product.type == OpenIapProduct.ProductType.Subs)
+                        ProductRequest.ProductRequestType.Subs else ProductRequest.ProductRequestType.InApp
                     iapStore.setActivity(activity)
                     iapStore.requestPurchase(
                         params = RequestPurchaseParams(skus = listOf(product.id)),

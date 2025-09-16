@@ -128,7 +128,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handlePurchaseUpdate(purchase: OpenIapPurchase) {
         when (purchase.purchaseState) {
-            PurchaseState.PURCHASED -> {
+            PurchaseState.Purchased -> {
                 // Acknowledge or consume the purchase
                 lifecycleScope.launch {
                     try {
@@ -141,7 +141,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            PurchaseState.PENDING -> {
+            PurchaseState.Pending -> {
                 // Purchase is pending (e.g., awaiting payment)
             }
             // Handle other states...
@@ -196,6 +196,8 @@ suspend fun getAvailableItemsByType(type: String): List<OpenIapPurchase>
 suspend fun acknowledgePurchase(purchaseToken: String): Boolean
 suspend fun consumePurchase(purchaseToken: String): Boolean
 ```
+
+> Note: Use `"in-app"` for in-app product types. The legacy alias `"inapp"` remains available for compatibility but will be removed in version 1.2.0.
 
 #### Store Information
 

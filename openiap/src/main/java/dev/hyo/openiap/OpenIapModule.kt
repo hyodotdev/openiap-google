@@ -101,15 +101,15 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
             val products = mutableListOf<OpenIapProduct>()
 
             // Fetch in-app products if requested
-            if (params.type == ProductRequest.ProductRequestType.INAPP ||
-                params.type == ProductRequest.ProductRequestType.ALL) {
+            if (params.type == ProductRequest.ProductRequestType.InApp ||
+                params.type == ProductRequest.ProductRequestType.All) {
                 val inappProducts = queryProducts(params.skus, BillingClient.ProductType.INAPP)
                 products.addAll(inappProducts)
             }
 
             // Fetch subscription products if requested
-            if (params.type == ProductRequest.ProductRequestType.SUBS ||
-                params.type == ProductRequest.ProductRequestType.ALL) {
+            if (params.type == ProductRequest.ProductRequestType.Subs ||
+                params.type == ProductRequest.ProductRequestType.All) {
                 val subsProducts = queryProducts(params.skus, BillingClient.ProductType.SUBS)
                 products.addAll(subsProducts)
             }
@@ -139,7 +139,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
             currentPurchaseCallback = { result ->
                 continuation.resume(result.getOrElse { emptyList() })
             }
-            val desiredType = if (type == ProductRequest.ProductRequestType.SUBS)
+            val desiredType = if (type == ProductRequest.ProductRequestType.Subs)
                 BillingClient.ProductType.SUBS else BillingClient.ProductType.INAPP
 
             val client = billingClient
@@ -172,7 +172,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                 for (pd in detailsList) {
                     val builder = BillingFlowParams.ProductDetailsParams.newBuilder()
                         .setProductDetails(pd)
-                    if (type == ProductRequest.ProductRequestType.SUBS) {
+                    if (type == ProductRequest.ProductRequestType.Subs) {
                         val offerToken = pd.subscriptionOfferDetails?.firstOrNull()?.offerToken
                         if (offerToken.isNullOrEmpty()) {
                             Log.w(TAG, "No subscription offer available for ${pd.productId}")
@@ -341,7 +341,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
 
     override suspend fun getAvailableItems(type: ProductRequest.ProductRequestType): List<OpenIapPurchase> =
         withContext(Dispatchers.IO) {
-            val productType = if (type == ProductRequest.ProductRequestType.SUBS) BillingClient.ProductType.SUBS else BillingClient.ProductType.INAPP
+            val productType = if (type == ProductRequest.ProductRequestType.Subs) BillingClient.ProductType.SUBS else BillingClient.ProductType.INAPP
             queryPurchases(productType)
         }
     
@@ -616,8 +616,8 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
             title = productDetails.title,
             description = productDetails.description,
             type = if (productType == BillingClient.ProductType.SUBS)
-                OpenIapProduct.ProductType.SUBS
-            else OpenIapProduct.ProductType.INAPP,
+                OpenIapProduct.ProductType.Subs
+            else OpenIapProduct.ProductType.InApp,
             displayName = productDetails.name,
             displayPrice = displayPrice,
             currency = currency,

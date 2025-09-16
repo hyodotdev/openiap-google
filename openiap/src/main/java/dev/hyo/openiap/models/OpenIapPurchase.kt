@@ -30,22 +30,22 @@ data class OpenIapPurchase(
     val obfuscatedProfileIdAndroid: String? = null
 ) {
     enum class PurchaseState(val value: String) {
-        PENDING("pending"),
-        PURCHASED("purchased"),
-        FAILED("failed"),
-        RESTORED("restored"), // iOS only but keeping for compatibility
-        DEFERRED("deferred"), // iOS only but keeping for compatibility
-        UNKNOWN("unknown");
+        Pending("pending"),
+        Purchased("purchased"),
+        Failed("failed"),
+        Restored("restored"), // iOS only but keeping for compatibility
+        Deferred("deferred"), // iOS only but keeping for compatibility
+        Unknown("unknown");
         
         companion object {
             fun fromString(value: String): PurchaseState = 
-                values().find { it.value == value } ?: UNKNOWN
+                values().find { it.value == value } ?: Unknown
                 
             fun fromBillingClientState(state: Int): PurchaseState = when (state) {
-                0 -> UNKNOWN // UNSPECIFIED_STATE
-                1 -> PURCHASED
-                2 -> PENDING
-                else -> UNKNOWN
+                0 -> Unknown // UNSPECIFIED_STATE
+                1 -> Purchased
+                2 -> Pending
+                else -> Unknown
             }
         }
     }

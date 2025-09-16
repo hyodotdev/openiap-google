@@ -21,9 +21,9 @@ fun PurchaseResultCard(
     onDismiss: () -> Unit
 ) {
     val (background, contentColor, icon) = when (status) {
-        PurchaseResultStatus.SUCCESS -> Triple(AppColors.success.copy(alpha = 0.1f), AppColors.success, Icons.Default.CheckCircle)
-        PurchaseResultStatus.INFO -> Triple(AppColors.info.copy(alpha = 0.1f), AppColors.info, Icons.Default.Info)
-        PurchaseResultStatus.ERROR -> Triple(AppColors.danger.copy(alpha = 0.1f), AppColors.danger, Icons.Default.ErrorOutline)
+        PurchaseResultStatus.Success -> Triple(AppColors.success.copy(alpha = 0.1f), AppColors.success, Icons.Default.CheckCircle)
+        PurchaseResultStatus.Info -> Triple(AppColors.info.copy(alpha = 0.1f), AppColors.info, Icons.Default.Info)
+        PurchaseResultStatus.Error -> Triple(AppColors.danger.copy(alpha = 0.1f), AppColors.danger, Icons.Default.ErrorOutline)
     }
     Card(
         modifier = Modifier
