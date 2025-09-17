@@ -169,19 +169,46 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
             fun launchBillingWith(detailsList: List<ProductDetails>) {
                 // Build params for all requested SKUs in order
                 val paramsList = mutableListOf<BillingFlowParams.ProductDetailsParams>()
-                for (pd in detailsList) {
+                val requestedOffersBySku = mutableMapOf<String, MutableList<String>>()
+                if (type == ProductRequest.ProductRequestType.Subs) {
+                    request.subscriptionOffers.forEach { offer ->
+                        if (offer.offerToken.isNotEmpty()) {
+                            val queue = requestedOffersBySku.getOrPut(offer.sku) { mutableListOf() }
+                            queue.add(offer.offerToken)
+                        }
+                    }
+                }
+
+                for ((index, pd) in detailsList.withIndex()) {
                     val builder = BillingFlowParams.ProductDetailsParams.newBuilder()
                         .setProductDetails(pd)
                     if (type == ProductRequest.ProductRequestType.Subs) {
-                        val offerToken = pd.subscriptionOfferDetails?.firstOrNull()?.offerToken
-                        if (offerToken.isNullOrEmpty()) {
-                            Log.w(TAG, "No subscription offer available for ${pd.productId}")
+                        val availableOfferTokens = pd.subscriptionOfferDetails?.map { it.offerToken } ?: emptyList()
+                        val requestedTokenFromQueue = requestedOffersBySku[pd.productId]?.let { queue ->
+                            if (queue.isNotEmpty()) queue.removeAt(0) else null
+                        }
+                        val requestedTokenFromIndex = request.subscriptionOffers.getOrNull(index)?.takeIf { it.sku == pd.productId }?.offerToken
+                        val resolvedOfferToken = requestedTokenFromQueue
+                            ?: requestedTokenFromIndex
+                            ?: pd.subscriptionOfferDetails?.firstOrNull()?.offerToken
+
+                        if (resolvedOfferToken.isNullOrEmpty()) {
+                            OpenIapLog.w("No subscription offer available for ${pd.productId}", TAG)
                             val err = OpenIapError.SkuOfferMismatch
                             purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
                             currentPurchaseCallback?.invoke(Result.success(emptyList()))
                             return
                         }
-                        builder.setOfferToken(offerToken)
+
+                        if (availableOfferTokens.isNotEmpty() && !availableOfferTokens.contains(resolvedOfferToken)) {
+                            OpenIapLog.w("Requested offerToken=$resolvedOfferToken not found for ${pd.productId}", TAG)
+                            val err = OpenIapError.SkuOfferMismatch
+                            purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
+                            currentPurchaseCallback?.invoke(Result.success(emptyList()))
+                            return
+                        }
+
+                        builder.setOfferToken(resolvedOfferToken)
                     }
                     paramsList.add(builder.build())
                 }
@@ -244,7 +271,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                         launchBillingWith(ordered)
                         // Do not complete here; wait for onPurchasesUpdated
                     } else {
-                        Log.w(TAG, "queryProductDetails failed: code=${billingResult.responseCode} msg=${billingResult.debugMessage}")
+                        OpenIapLog.w("queryProductDetails failed: code=${billingResult.responseCode} msg=${billingResult.debugMessage}", TAG)
                         val err = OpenIapError.QueryProduct()
                         purchaseErrorListeners.forEach { runCatching { it.onPurchaseError(err) } }
                         currentPurchaseCallback?.invoke(Result.success(emptyList()))
@@ -397,7 +424,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
                         billingResult.responseCode,
                         billingResult.debugMessage
                     )
-                    Log.w(TAG, "Purchase failed: code=${billingResult.responseCode} msg=${error.message}")
+                    OpenIapLog.w("Purchase failed: code=${billingResult.responseCode} msg=${error.message}", TAG)
                     // Surface framework-specific error upstream (maintains type for UserCancelled, etc.)
                     purchaseErrorListeners.forEach { listener ->
                         runCatching { listener.onPurchaseError(error) }
@@ -569,9 +596,9 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
             object : BillingClientStateListener {
                 override fun onBillingSetupFinished(billingResult: BillingResult) {
                     if (billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
-                        Log.w(
-                            TAG,
+                        OpenIapLog.w(
                             "Billing setup finished with error: ${billingResult.debugMessage}",
+                            TAG,
                         )
                         onFailure(IllegalStateException(billingResult.debugMessage ?: "Billing setup failed"))
                         return

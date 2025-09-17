@@ -8,7 +8,8 @@ data class RequestPurchaseParams(
     val skus: List<String>,
     val obfuscatedAccountIdAndroid: String? = null,
     val obfuscatedProfileIdAndroid: String? = null,
-    val isOfferPersonalized: Boolean? = null
+    val isOfferPersonalized: Boolean? = null,
+    val subscriptionOffers: List<RequestSubscriptionAndroidProps.SubscriptionOffer> = emptyList()
 )
 
 /**
