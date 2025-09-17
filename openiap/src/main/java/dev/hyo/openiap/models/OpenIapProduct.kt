@@ -23,12 +23,12 @@ data class OpenIapProduct(
     val subscriptionOfferDetailsAndroid: List<SubscriptionOfferDetail>? = null
 ) {
     enum class ProductType(val value: String) {
-        INAPP("inapp"),
-        SUBS("subs");
+        InApp("in-app"),
+        Subs("subs");
         
         companion object {
             fun fromString(value: String): ProductType = 
-                values().find { it.value == value } ?: INAPP
+                values().find { it.value == value } ?: InApp
         }
     }
 

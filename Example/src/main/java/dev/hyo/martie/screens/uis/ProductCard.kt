@@ -65,7 +65,7 @@ fun ProductCard(
                     Surface(
                         shape = RoundedCornerShape(4.dp),
                         color = when (product.type) {
-                            OpenIapProduct.ProductType.SUBS -> AppColors.secondary
+                            OpenIapProduct.ProductType.Subs -> AppColors.secondary
                             else -> AppColors.primary
                         }.copy(alpha = 0.2f)
                     ) {
@@ -74,7 +74,7 @@ fun ProductCard(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = when (product.type) {
-                                OpenIapProduct.ProductType.SUBS -> AppColors.secondary
+                                OpenIapProduct.ProductType.Subs -> AppColors.secondary
                                 else -> AppColors.primary
                             }
                         )

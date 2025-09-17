@@ -77,12 +77,12 @@ fun AvailablePurchasesScreen(
                                     val restored = iapStore.restorePurchases()
                                     iapStore.postStatusMessage(
                                         message = "Restored ${restored.size} purchases",
-                                        status = PurchaseResultStatus.SUCCESS
+                                        status = PurchaseResultStatus.Success
                                     )
                                 } catch (e: Exception) {
                                     iapStore.postStatusMessage(
                                         message = e.message ?: "Restore failed",
-                                        status = PurchaseResultStatus.ERROR
+                                        status = PurchaseResultStatus.Error
                                     )
                                 }
                             }
@@ -195,7 +195,7 @@ fun AvailablePurchasesScreen(
             // Check for unfinished transactions (purchases that need acknowledgment/consumption)
             val unfinishedPurchases = purchases.filter { purchase ->
                 // TODO: In real implementation, check if purchase needs acknowledgment/consumption
-                // This would typically check: purchase.purchaseState == PURCHASED && !purchase.isAcknowledged
+                // This would typically check: purchase.purchaseState == PurchaseState.Purchased && !purchase.isAcknowledged
                 // For demo purposes, let's assume some consumable purchases might need finishing
                 (purchase.productId.contains("consumable", ignoreCase = true) ||
                  purchase.productId.contains("bulb", ignoreCase = true)) && 
@@ -218,21 +218,21 @@ fun AvailablePurchasesScreen(
                                     if (ok) {
                                         iapStore.postStatusMessage(
                                             message = "Transaction finished successfully",
-                                            status = PurchaseResultStatus.SUCCESS,
+                                            status = PurchaseResultStatus.Success,
                                             productId = purchase.productId
                                         )
                                         iapStore.getAvailablePurchases()
                                     } else {
                                         iapStore.postStatusMessage(
                                             message = "Failed to finish transaction",
-                                            status = PurchaseResultStatus.ERROR,
+                                            status = PurchaseResultStatus.Error,
                                             productId = purchase.productId
                                         )
                                     }
                                 } catch (e: Exception) {
                                     iapStore.postStatusMessage(
                                         message = e.message ?: "Failed to finish transaction",
-                                        status = PurchaseResultStatus.ERROR,
+                                        status = PurchaseResultStatus.Error,
                                         productId = purchase.productId
                                     )
                                 }
@@ -304,7 +304,7 @@ fun AvailablePurchasesScreen(
                 items(nonConsumables) { purchase ->
                     PurchaseItemCard(
                         purchase = purchase,
-                        type = PurchaseType.NON_CONSUMABLE,
+                        type = PurchaseType.NonConsumable,
                         onClick = { selectedPurchase = purchase }
                     )
                 }
@@ -319,7 +319,7 @@ fun AvailablePurchasesScreen(
                 items(consumables) { purchase ->
                     PurchaseItemCard(
                         purchase = purchase,
-                        type = PurchaseType.CONSUMABLE,
+                        type = PurchaseType.Consumable,
                         onClick = { selectedPurchase = purchase }
                     )
                 }
@@ -412,12 +412,12 @@ fun AvailablePurchasesScreen(
                                     val restored = iapStore.restorePurchases()
                                     iapStore.postStatusMessage(
                                         message = "Restored ${restored.size} purchases",
-                                        status = PurchaseResultStatus.SUCCESS
+                                        status = PurchaseResultStatus.Success
                                     )
                                 } catch (e: Exception) {
                                     iapStore.postStatusMessage(
                                         message = e.message ?: "Restore failed",
-                                        status = PurchaseResultStatus.ERROR
+                                        status = PurchaseResultStatus.Error
                                     )
                                 }
                             }
@@ -444,9 +444,9 @@ fun AvailablePurchasesScreen(
 }
 
 enum class PurchaseType {
-    CONSUMABLE,
-    NON_CONSUMABLE,
-    SUBSCRIPTION
+    Consumable,
+    NonConsumable,
+    Subscription,
 }
 
 @Composable
@@ -456,17 +456,17 @@ fun PurchaseItemCard(
     onClick: () -> Unit
 ) {
     val (backgroundColor, iconColor, icon) = when (type) {
-        PurchaseType.SUBSCRIPTION -> Triple(
+        PurchaseType.Subscription -> Triple(
             AppColors.secondary.copy(alpha = 0.1f),
             AppColors.secondary,
             Icons.Default.Autorenew
         )
-        PurchaseType.NON_CONSUMABLE -> Triple(
+        PurchaseType.NonConsumable -> Triple(
             AppColors.success.copy(alpha = 0.1f),
             AppColors.success,
             Icons.Default.CheckCircle
         )
-        PurchaseType.CONSUMABLE -> Triple(
+        PurchaseType.Consumable -> Triple(
             AppColors.warning.copy(alpha = 0.1f),
             AppColors.warning,
             Icons.Default.Schedule

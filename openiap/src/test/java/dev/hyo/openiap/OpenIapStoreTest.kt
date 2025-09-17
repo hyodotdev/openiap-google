@@ -97,7 +97,7 @@ class OpenIapStoreTest {
             purchaseToken = token,
             platform = "android",
             quantity = 1,
-            purchaseState = OpenIapPurchase.PurchaseState.PURCHASED,
+            purchaseState = OpenIapPurchase.PurchaseState.Purchased,
             isAutoRenewing = false,
             purchaseTokenAndroid = token,
             dataAndroid = null,
@@ -134,7 +134,7 @@ class OpenIapStoreTest {
 
         val result = store.requestPurchase(
             RequestPurchaseParams(skus = listOf("sku1")),
-            ProductRequest.ProductRequestType.INAPP
+            ProductRequest.ProductRequestType.InApp
         )
 
         assertEquals(1, result.size)
