@@ -686,7 +686,7 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
         productType: String
     ): OpenIapPurchase {
         return OpenIapPurchase(
-            id = purchase.purchaseToken,
+            id = purchase.orderId ?: purchase.purchaseToken,
             productId = purchase.products.firstOrNull() ?: "",
             ids = purchase.products,
             transactionId = purchase.orderId,
@@ -697,7 +697,6 @@ class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUp
             quantity = purchase.quantity,
             purchaseState = OpenIapPurchase.PurchaseState.fromBillingClientState(purchase.purchaseState),
             isAutoRenewing = purchase.isAutoRenewing,
-            purchaseTokenAndroid = purchase.purchaseToken,
             dataAndroid = purchase.originalJson,
             signatureAndroid = purchase.signature,
             autoRenewingAndroid = purchase.isAutoRenewing,

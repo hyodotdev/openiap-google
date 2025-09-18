@@ -9,7 +9,7 @@ data class OpenIapPurchase(
     val id: String,
     val productId: String,
     val ids: List<String>? = null,
-    val transactionId: String? = null, // deprecated - use id instead
+    val transactionId: String? = null,
     val transactionDate: Long,
     val transactionReceipt: String,
     val purchaseToken: String? = null, // unified purchase token
