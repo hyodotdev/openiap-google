@@ -17,14 +17,6 @@ import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase as BillingPurchase
 
 internal object BillingConverters {
-    fun ProductDetails.toProduct(productType: String): Product {
-        return if (productType == BillingClient.ProductType.SUBS) {
-            toSubscriptionProduct().toProduct()
-        } else {
-            toInAppProduct()
-        }
-    }
-
     fun ProductDetails.toInAppProduct(): ProductAndroid {
         val offer = oneTimePurchaseOfferDetails
         val displayPrice = offer?.formattedPrice.orEmpty()
@@ -122,18 +114,11 @@ internal object BillingConverters {
             purchaseToken = purchaseToken,
             quantity = quantity,
             signatureAndroid = signature,
+            transactionId = orderId,
             transactionDate = purchaseTime.toDouble()
         )
     }
 
-    fun BillingPurchase.toActiveSubscription(): ActiveSubscription = ActiveSubscription(
-        autoRenewingAndroid = isAutoRenewing,
-        isActive = true,
-        productId = products.firstOrNull().orEmpty(),
-        purchaseToken = purchaseToken,
-        transactionDate = purchaseTime.toDouble(),
-        transactionId = orderId ?: purchaseToken
-    )
 }
 
 fun PurchaseState.Companion.fromBillingState(state: Int): PurchaseState = when (state) {

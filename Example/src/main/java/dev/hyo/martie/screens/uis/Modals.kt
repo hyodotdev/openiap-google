@@ -22,8 +22,6 @@ import dev.hyo.openiap.ProductAndroid
 import dev.hyo.openiap.ProductType
 import dev.hyo.openiap.PurchaseAndroid
 import dev.hyo.openiap.PurchaseState
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -207,7 +205,6 @@ fun PurchaseDetailModal(
     onDismiss: () -> Unit
 ) {
     val clipboard = LocalClipboardManager.current
-    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -286,18 +283,21 @@ fun PurchaseDetailModal(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DetailRow("Purchase Token", purchase.purchaseToken ?: "-")
-                    DetailRow("Order ID", purchase.id)
-                    DetailRow(
-                        "Transaction Date",
-                        dateFormat.format(Date(purchase.transactionDate.toLong()))
-                    )
-                    DetailRow("Auto Renewing", purchase.isAutoRenewing.toString())
-                    purchase.autoRenewingAndroid?.let { DetailRow("Auto Renewing (Android)", it.toString()) }
-                    purchase.isAcknowledgedAndroid?.let { DetailRow("Acknowledged", it.toString()) }
-                    purchase.obfuscatedAccountIdAndroid?.let { DetailRow("Account ID", it) }
-                    purchase.obfuscatedProfileIdAndroid?.let { DetailRow("Profile ID", it) }
-                    purchase.signatureAndroid?.let { DetailRow("Signature", it) }
+                    val detailRows = buildList {
+                        add("id" to purchase.id)
+                        add("transactionId" to (purchase.transactionId ?: "-"))
+                        add("purchaseToken" to (purchase.purchaseToken ?: "-"))
+                        add("purchaseState" to purchase.purchaseState.rawValue)
+                        add("productId" to purchase.productId)
+                        add("transactionDate" to purchase.transactionDate.toString())
+                        add("isAutoRenewing" to purchase.isAutoRenewing.toString())
+                        purchase.autoRenewingAndroid?.let { add("autoRenewingAndroid" to it.toString()) }
+                        purchase.isAcknowledgedAndroid?.let { add("isAcknowledgedAndroid" to it.toString()) }
+                        purchase.obfuscatedAccountIdAndroid?.let { add("obfuscatedAccountIdAndroid" to it) }
+                        purchase.obfuscatedProfileIdAndroid?.let { add("obfuscatedProfileIdAndroid" to it) }
+                        purchase.signatureAndroid?.let { add("signatureAndroid" to it) }
+                    }
+                    detailRows.forEach { (label, value) -> DetailRow(label, value) }
                 }
 
                 HorizontalDivider()
