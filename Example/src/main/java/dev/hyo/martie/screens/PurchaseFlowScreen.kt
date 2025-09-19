@@ -1,5 +1,7 @@
 package dev.hyo.martie.screens
 
+import android.app.Activity
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,26 +14,28 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import android.app.Activity
-import android.content.Context
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import dev.hyo.martie.models.AppColors
 import dev.hyo.martie.IapConstants
+import dev.hyo.martie.models.AppColors
 import dev.hyo.martie.screens.uis.*
 import dev.hyo.openiap.IapContext
+import dev.hyo.openiap.OpenIapError
 import dev.hyo.openiap.store.OpenIapStore
-import dev.hyo.openiap.models.*
-import kotlinx.coroutines.launch
+import dev.hyo.openiap.store.PurchaseResultStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import dev.hyo.openiap.OpenIapError
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
-import dev.hyo.openiap.models.OpenIapSerialization
-import dev.hyo.openiap.store.PurchaseResultStatus
+import kotlinx.coroutines.launch
+import dev.hyo.openiap.Product
+import dev.hyo.openiap.ProductAndroid
+import dev.hyo.openiap.ProductQueryType
+import dev.hyo.openiap.ProductType
+import dev.hyo.openiap.Purchase
+import dev.hyo.openiap.PurchaseAndroid
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,14 +50,16 @@ fun PurchaseFlowScreen(
     val iapStore = storeParam ?: remember(appContext) { OpenIapStore(appContext) }
     val products by iapStore.products.collectAsState()
     val purchases by iapStore.availablePurchases.collectAsState()
+    val androidProducts = remember(products) { products.filterIsInstance<ProductAndroid>() }
+    val androidPurchases = remember(purchases) { purchases.filterIsInstance<PurchaseAndroid>() }
     val status by iapStore.status.collectAsState()
     val lastPurchase by iapStore.currentPurchase.collectAsState(initial = null)
     val connectionStatus by iapStore.connectionStatus.collectAsState()
     val clipboard = LocalClipboardManager.current
     val statusMessage = status.lastPurchaseResult
     // Modal states
-    var selectedProduct by remember { mutableStateOf<OpenIapProduct?>(null) }
-    var selectedPurchase by remember { mutableStateOf<OpenIapPurchase?>(null) }
+    var selectedProduct by remember { mutableStateOf<ProductAndroid?>(null) }
+    var selectedPurchase by remember { mutableStateOf<PurchaseAndroid?>(null) }
     
     // Initialize and connect on first composition (spec-aligned names)
     val startupScope = rememberCoroutineScope()
@@ -65,7 +71,7 @@ fun PurchaseFlowScreen(
                     iapStore.setActivity(activity)
                     iapStore.fetchProducts(
                         skus = IapConstants.INAPP_SKUS,
-                        type = ProductRequest.ProductRequestType.InApp
+                        type = ProductQueryType.InApp
                     )
                     iapStore.getAvailablePurchases()
                 }
@@ -98,7 +104,7 @@ fun PurchaseFlowScreen(
                                     iapStore.setActivity(activity)
                                     iapStore.fetchProducts(
                                         skus = IapConstants.INAPP_SKUS,
-                                        type = ProductRequest.ProductRequestType.InApp
+                                        type = ProductQueryType.InApp
                                     )
                                 } catch (_: Exception) { }
                             }
@@ -196,17 +202,17 @@ fun PurchaseFlowScreen(
                             ) {
                                 OutlinedButton(
                                     onClick = {
-                                        lastPurchase?.let { p ->
-                                            val json = OpenIapSerialization.toJson(p)
+                                        (lastPurchase as? PurchaseAndroid)?.let { p ->
+                                            val json = p.toJson().toString()
                                             clipboard.setText(AnnotatedString(json))
                                         }
                                     },
-                                    enabled = lastPurchase != null
+                                    enabled = lastPurchase is PurchaseAndroid
                                 ) { Text("Copy Result") }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 OutlinedButton(
-                                    onClick = { selectedPurchase = lastPurchase },
-                                    enabled = lastPurchase != null
+                                    onClick = { selectedPurchase = lastPurchase as? PurchaseAndroid },
+                                    enabled = lastPurchase is PurchaseAndroid
                                 ) { Text("Details") }
                             }
                         }
@@ -215,31 +221,31 @@ fun PurchaseFlowScreen(
             }
 
             // Products Section
-            if (products.isNotEmpty()) {
+            if (androidProducts.isNotEmpty()) {
                 item {
                     SectionHeaderView(title = "Available Products")
                 }
 
-                items(products) { product ->
+                items(androidProducts) { androidProduct ->
                     ProductCard(
-                        product = product,
-                        isPurchasing = status.isPurchasing(product.id),
+                        product = androidProduct,
+                        isPurchasing = status.isPurchasing(androidProduct.id),
                         onPurchase = {
                             scope.launch {
-                                val reqType = if (product.type == OpenIapProduct.ProductType.Subs)
-                                    ProductRequest.ProductRequestType.Subs else ProductRequest.ProductRequestType.InApp
+                                val reqType = if (androidProduct.type == ProductType.Subs)
+                                    ProductQueryType.Subs else ProductQueryType.InApp
                                 iapStore.setActivity(activity)
                                 iapStore.requestPurchase(
-                                    params = RequestPurchaseParams(skus = listOf(product.id)),
+                                    skus = listOf(androidProduct.id),
                                     type = reqType
                                 )
                             }
                         },
                         onClick = {
-                            selectedProduct = product
+                            selectedProduct = androidProduct
                         },
                         onDetails = {
-                            selectedProduct = product
+                            selectedProduct = androidProduct
                         }
                     )
                 }
@@ -253,16 +259,16 @@ fun PurchaseFlowScreen(
             }
             
             // Active Purchases Section
-            if (purchases.isNotEmpty()) {
+            if (androidPurchases.isNotEmpty()) {
                 item {
                     SectionHeaderView(title = "Active Purchases")
                 }
                 
-                items(purchases) { purchase ->
+                items(androidPurchases) { androidPurchase ->
                     ActivePurchaseCard(
-                        purchase = purchase,
+                        purchase = androidPurchase,
                         onClick = {
-                            selectedPurchase = purchase
+                            selectedPurchase = androidPurchase
                         }
                     )
                 }
@@ -312,7 +318,7 @@ fun PurchaseFlowScreen(
                                 try {
                                     iapStore.fetchProducts(
                                         skus = IapConstants.INAPP_SKUS,
-                                        type = ProductRequest.ProductRequestType.InApp
+                                        type = ProductQueryType.InApp
                                     )
                                 } catch (_: Exception) { }
                             }
@@ -330,7 +336,7 @@ fun PurchaseFlowScreen(
     }
     
     // Simple helper: simulate server-side receipt validation
-    suspend fun validateReceiptOnServer(purchase: OpenIapPurchase): Boolean {
+    suspend fun validateReceiptOnServer(purchase: PurchaseAndroid): Boolean {
         // TODO: Replace with your real backend API call
         // e.g., POST purchase.purchaseToken to your server and verify
         return true
@@ -339,7 +345,7 @@ fun PurchaseFlowScreen(
     // Auto-handle purchase: validate on server then finish
     // IMPORTANT: Implement real server-side receipt validation in validateReceiptOnServer()
     LaunchedEffect(lastPurchase?.id) {
-        val purchase = lastPurchase ?: return@LaunchedEffect
+        val purchase = lastPurchase as? PurchaseAndroid ?: return@LaunchedEffect
         try {
             // 1) Server-side validation (replace with your backend call)
             val valid = validateReceiptOnServer(purchase)
@@ -354,7 +360,7 @@ fun PurchaseFlowScreen(
             // 2) Determine consumable vs non-consumable
             val product = products.find { it.id == purchase.productId }
             val isConsumable = product?.let {
-                it.type == OpenIapProduct.ProductType.InApp &&
+                it.type == ProductType.InApp &&
                         (it.id.contains("consumable", true) || it.id.contains("bulb", true))
             } == true
 
@@ -400,11 +406,11 @@ fun PurchaseFlowScreen(
             onDismiss = { selectedProduct = null },
             onPurchase = {
                 uiScope.launch {
-                    val reqType = if (product.type == OpenIapProduct.ProductType.Subs)
-                        ProductRequest.ProductRequestType.Subs else ProductRequest.ProductRequestType.InApp
+                    val reqType = if (product.type == ProductType.Subs)
+                        ProductQueryType.Subs else ProductQueryType.InApp
                     iapStore.setActivity(activity)
                     iapStore.requestPurchase(
-                        params = RequestPurchaseParams(skus = listOf(product.id)),
+                        skus = listOf(product.id),
                         type = reqType
                     )
                 }

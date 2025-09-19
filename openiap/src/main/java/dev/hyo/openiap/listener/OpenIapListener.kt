@@ -1,7 +1,7 @@
 package dev.hyo.openiap.listener
 
-import dev.hyo.openiap.models.OpenIapPurchase
 import dev.hyo.openiap.OpenIapError
+import dev.hyo.openiap.Purchase
 
 /**
  * Listener for purchase updates
@@ -11,7 +11,7 @@ fun interface OpenIapPurchaseUpdateListener {
      * Called when a purchase is updated
      * @param purchase The updated purchase
      */
-    fun onPurchaseUpdated(purchase: OpenIapPurchase)
+    fun onPurchaseUpdated(purchase: Purchase)
 }
 
 /**

@@ -1,13 +1,35 @@
 package dev.hyo.openiap.store
 
+import dev.hyo.openiap.ActiveSubscription
+import dev.hyo.openiap.DeepLinkOptions
+import dev.hyo.openiap.FetchProductsResult
+import dev.hyo.openiap.FetchProductsResultProducts
+import dev.hyo.openiap.FetchProductsResultSubscriptions
+import dev.hyo.openiap.Product
+import dev.hyo.openiap.ProductAndroid
+import dev.hyo.openiap.ProductQueryType
+import dev.hyo.openiap.ProductRequest
+import dev.hyo.openiap.ProductSubscription
+import dev.hyo.openiap.ProductSubscriptionAndroid
+import dev.hyo.openiap.Purchase
+import dev.hyo.openiap.PurchaseAndroid
+import dev.hyo.openiap.PurchaseInput
+import dev.hyo.openiap.PurchaseOptions
+import dev.hyo.openiap.RequestPurchaseAndroidProps
+import dev.hyo.openiap.RequestPurchaseProps
+import dev.hyo.openiap.RequestPurchasePropsByPlatforms
+import dev.hyo.openiap.RequestSubscriptionAndroidProps
+import dev.hyo.openiap.RequestSubscriptionPropsByPlatforms
+import dev.hyo.openiap.RequestPurchaseResultPurchase
+import dev.hyo.openiap.RequestPurchaseResultPurchases
 import android.app.Activity
 import android.content.Context
-import dev.hyo.openiap.OpenIapModule
+import com.android.billingclient.api.BillingClient
 import dev.hyo.openiap.OpenIapError
-import dev.hyo.openiap.OpenIapProtocol
-import dev.hyo.openiap.models.*
-import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
+import dev.hyo.openiap.OpenIapModule
 import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
+import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
+import dev.hyo.openiap.utils.toProduct
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +39,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Convenience store that wraps OpenIapModule and provides spec-aligned, suspend APIs
  * with observable StateFlows for UI layers (Compose/XML) to consume.
  */
-class OpenIapStore(private val module: OpenIapProtocol) {
+class OpenIapStore(private val module: OpenIapModule) {
     constructor(context: Context) : this(OpenIapModule(context))
 
     // Public state
@@ -26,14 +48,17 @@ class OpenIapStore(private val module: OpenIapProtocol) {
     // Backwards-compat alias for example app
     val connectionStatus: StateFlow<Boolean> get() = isConnected
 
-    private val _products = MutableStateFlow<List<OpenIapProduct>>(emptyList())
-    val products: StateFlow<List<OpenIapProduct>> = _products.asStateFlow()
+    private val _products = MutableStateFlow<List<Product>>(emptyList())
+    val products: StateFlow<List<Product>> = _products.asStateFlow()
 
-    private val _availablePurchases = MutableStateFlow<List<OpenIapPurchase>>(emptyList())
-    val availablePurchases: StateFlow<List<OpenIapPurchase>> = _availablePurchases.asStateFlow()
+    private val _subscriptions = MutableStateFlow<List<ProductSubscription>>(emptyList())
+    val subscriptions: StateFlow<List<ProductSubscription>> = _subscriptions.asStateFlow()
 
-    private val _currentPurchase = MutableStateFlow<OpenIapPurchase?>(null)
-    val currentPurchase: StateFlow<OpenIapPurchase?> = _currentPurchase.asStateFlow()
+    private val _availablePurchases = MutableStateFlow<List<Purchase>>(emptyList())
+    val availablePurchases: StateFlow<List<Purchase>> = _availablePurchases.asStateFlow()
+
+    private val _currentPurchase = MutableStateFlow<Purchase?>(null)
+    val currentPurchase: StateFlow<Purchase?> = _currentPurchase.asStateFlow()
 
     private val _status = MutableStateFlow(IapStatus())
     val status: StateFlow<IapStatus> = _status.asStateFlow()
@@ -90,7 +115,6 @@ class OpenIapStore(private val module: OpenIapProtocol) {
     }
 
     init {
-        // Wire event listeners to update Store state (event-based flow)
         module.addPurchaseUpdateListener(purchaseUpdateListener)
         module.addPurchaseErrorListener(purchaseErrorListener)
     }
@@ -138,12 +162,24 @@ class OpenIapStore(private val module: OpenIapProtocol) {
     // -------------------------------------------------------------------------
     suspend fun fetchProducts(
         skus: List<String>,
-        type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.All
-    ): List<OpenIapProduct> {
+        type: ProductQueryType = ProductQueryType.All
+    ): FetchProductsResult {
         setLoading { it.fetchProducts = true }
         return try {
             val result = module.fetchProducts(ProductRequest(skus = skus, type = type))
-            _products.value = result
+            when (result) {
+                is FetchProductsResultProducts -> {
+                    _products.value = result.value.orEmpty()
+                    _subscriptions.value = emptyList()
+                }
+                is FetchProductsResultSubscriptions -> {
+                    val subs = result.value.orEmpty()
+                    _subscriptions.value = subs
+                    _products.value = subs.mapNotNull { subscription ->
+                        (subscription as? ProductSubscriptionAndroid)?.toProduct()
+                    }
+                }
+            }
             result
         } catch (e: Exception) {
             setError(e.message)
@@ -156,7 +192,7 @@ class OpenIapStore(private val module: OpenIapProtocol) {
     // -------------------------------------------------------------------------
     // Purchases / Restore
     // -------------------------------------------------------------------------
-    suspend fun getAvailablePurchases(options: PurchaseOptions? = null): List<OpenIapPurchase> {
+    suspend fun getAvailablePurchases(options: PurchaseOptions? = null): List<Purchase> {
         setLoading { it.restorePurchases = true }
         return try {
             val result = module.getAvailablePurchases(options)
@@ -170,48 +206,46 @@ class OpenIapStore(private val module: OpenIapProtocol) {
         }
     }
 
-    suspend fun restorePurchases(): List<OpenIapPurchase> {
-        return getAvailablePurchases()
-    }
+    suspend fun restorePurchases(): List<Purchase> = getAvailablePurchases()
 
-    // Convenience alias to match example usage
-    suspend fun loadPurchases(): List<OpenIapPurchase> = getAvailablePurchases()
+    suspend fun loadPurchases(): List<Purchase> = getAvailablePurchases()
 
     // -------------------------------------------------------------------------
     // Purchase Flow
     // -------------------------------------------------------------------------
     suspend fun requestPurchase(
-        params: RequestPurchaseParams,
-        type: ProductRequest.ProductRequestType = ProductRequest.ProductRequestType.InApp
-    ): List<OpenIapPurchase> {
-        val skuForStatus = params.skus.firstOrNull()
+        skus: List<String>,
+        type: ProductQueryType = ProductQueryType.InApp
+    ): List<Purchase> {
+        val skuForStatus = skus.firstOrNull()
         if (skuForStatus != null) {
             addPurchasing(skuForStatus)
             pendingRequestProductId = skuForStatus
         }
         return try {
-            module.requestPurchase(params, type)
+            val request = buildRequestPurchaseProps(skus, type)
+            when (val result = module.requestPurchase(request)) {
+                is RequestPurchaseResultPurchases -> result.value.orEmpty()
+                is RequestPurchaseResultPurchase -> result.value?.let(::listOf).orEmpty()
+                else -> emptyList()
+            }
         } finally {
             if (skuForStatus != null) removePurchasing(skuForStatus)
         }
     }
 
     suspend fun finishTransaction(
-        purchase: OpenIapPurchase,
+        purchase: Purchase,
         isConsumable: Boolean = false
     ): Boolean {
-        // Skip if already acknowledged or processed
-        val token = purchase.purchaseToken ?: purchase.purchaseTokenAndroid
-        if (purchase.isAcknowledgedAndroid == true || (token != null && processedPurchaseTokens.contains(token))) {
+        val token = purchase.purchaseToken
+        if ((purchase is PurchaseAndroid && purchase.isAcknowledgedAndroid == true) || (token != null && processedPurchaseTokens.contains(token))) {
             return true
         }
         return try {
-            val result = module.finishTransaction(
-                FinishTransactionParams(purchase = purchase, isConsumable = isConsumable)
-            )
-            val ok = result.responseCode == 0
-            if (ok && token != null) processedPurchaseTokens.add(token)
-            ok
+            module.finishTransaction(purchase.toInput(), isConsumable)
+            if (token != null) processedPurchaseTokens.add(token)
+            true
         } catch (e: Exception) {
             setError(e.message)
             throw e
@@ -221,7 +255,7 @@ class OpenIapStore(private val module: OpenIapProtocol) {
     // -------------------------------------------------------------------------
     // Subscriptions
     // -------------------------------------------------------------------------
-    suspend fun getActiveSubscriptions(subscriptionIds: List<String>? = null): List<OpenIapActiveSubscription> =
+    suspend fun getActiveSubscriptions(subscriptionIds: List<String>? = null): List<ActiveSubscription> =
         module.getActiveSubscriptions(subscriptionIds)
 
     suspend fun hasActiveSubscriptions(subscriptionIds: List<String>? = null): Boolean =
@@ -230,7 +264,7 @@ class OpenIapStore(private val module: OpenIapProtocol) {
     suspend fun deepLinkToSubscriptions(options: DeepLinkOptions) = module.deepLinkToSubscriptions(options)
 
     // -------------------------------------------------------------------------
-    // Event listeners
+    // Event listeners passthrough
     // -------------------------------------------------------------------------
     fun addPurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener) = module.addPurchaseUpdateListener(listener)
     fun removePurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener) = module.removePurchaseUpdateListener(listener)
@@ -304,6 +338,58 @@ class OpenIapStore(private val module: OpenIapProtocol) {
         set.remove(productId)
         _status.value = current.copy(loadings = current.loadings.copy(purchasing = set))
     }
+
+    private fun buildRequestPurchaseProps(skus: List<String>, type: ProductQueryType): RequestPurchaseProps {
+        return when (type) {
+            ProductQueryType.InApp -> {
+                val android = RequestPurchaseAndroidProps(
+                    isOfferPersonalized = null,
+                    obfuscatedAccountIdAndroid = null,
+                    obfuscatedProfileIdAndroid = null,
+                    skus = skus
+                )
+                RequestPurchaseProps(
+                    request = RequestPurchaseProps.Request.Purchase(
+                        RequestPurchasePropsByPlatforms(android = android)
+                    ),
+                    type = ProductQueryType.InApp
+                )
+            }
+            ProductQueryType.Subs -> {
+                val android = RequestSubscriptionAndroidProps(
+                    isOfferPersonalized = null,
+                    obfuscatedAccountIdAndroid = null,
+                    obfuscatedProfileIdAndroid = null,
+                    purchaseTokenAndroid = null,
+                    replacementModeAndroid = null,
+                    skus = skus,
+                    subscriptionOffers = null
+                )
+                RequestPurchaseProps(
+                    request = RequestPurchaseProps.Request.Subscription(
+                        RequestSubscriptionPropsByPlatforms(android = android)
+                    ),
+                    type = ProductQueryType.Subs
+                )
+            }
+            ProductQueryType.All -> throw IllegalArgumentException("type must be InApp or Subs when requesting a purchase")
+        }
+    }
+
+    private fun Purchase.toInput(): PurchaseInput = when (this) {
+        is PurchaseAndroid -> PurchaseInput(
+            id = id,
+            ids = ids,
+            isAutoRenewing = isAutoRenewing,
+            platform = platform,
+            productId = productId,
+            purchaseState = purchaseState,
+            purchaseToken = purchaseToken,
+            quantity = quantity,
+            transactionDate = transactionDate
+        )
+        else -> throw UnsupportedOperationException("Only Android purchases are supported on this platform")
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -362,4 +448,8 @@ enum class IapOperationType {
     RestorePurchases,
     ValidateReceipt,
 }
-sealed class IapOperationResult { object Success : IapOperationResult(); data class Failure(val message: String) : IapOperationResult(); object Cancelled : IapOperationResult() }
+sealed class IapOperationResult {
+    object Success : IapOperationResult()
+    data class Failure(val message: String) : IapOperationResult()
+    object Cancelled : IapOperationResult()
+}

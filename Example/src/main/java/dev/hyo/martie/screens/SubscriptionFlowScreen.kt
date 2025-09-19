@@ -24,12 +24,16 @@ import dev.hyo.martie.models.AppColors
 import dev.hyo.martie.IapConstants
 import dev.hyo.martie.screens.uis.*
 import dev.hyo.openiap.IapContext
+import dev.hyo.openiap.ProductAndroid
+import dev.hyo.openiap.ProductQueryType
+import dev.hyo.openiap.ProductType
+import dev.hyo.openiap.PurchaseAndroid
+import dev.hyo.openiap.PurchaseState
 import dev.hyo.openiap.store.OpenIapStore
-import dev.hyo.openiap.models.*
+import dev.hyo.openiap.store.PurchaseResultStatus
+import dev.hyo.openiap.OpenIapError
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-import dev.hyo.openiap.OpenIapError
-import dev.hyo.openiap.store.PurchaseResultStatus
 
 // Helper to format remaining time like "3d 4h" / "2h 12m" / "35m"
 private fun formatRemaining(deltaMillis: Long): String {
@@ -58,6 +62,8 @@ fun SubscriptionFlowScreen(
     val iapStore = storeParam ?: remember(appContext) { OpenIapStore(appContext) }
     val products by iapStore.products.collectAsState()
     val purchases by iapStore.availablePurchases.collectAsState()
+    val androidProducts = remember(products) { products.filterIsInstance<ProductAndroid>() }
+    val androidPurchases = remember(purchases) { purchases.filterIsInstance<PurchaseAndroid>() }
     val status by iapStore.status.collectAsState()
     val connectionStatus by iapStore.connectionStatus.collectAsState()
     val lastPurchase by iapStore.currentPurchase.collectAsState(initial = null)
@@ -107,8 +113,8 @@ fun SubscriptionFlowScreen(
     val statusMessage = status.lastPurchaseResult
     
     // Modal states
-    var selectedProduct by remember { mutableStateOf<OpenIapProduct?>(null) }
-    var selectedPurchase by remember { mutableStateOf<OpenIapPurchase?>(null) }
+    var selectedProduct by remember { mutableStateOf<ProductAndroid?>(null) }
+    var selectedPurchase by remember { mutableStateOf<PurchaseAndroid?>(null) }
     
     // Initialize and connect on first composition (spec-aligned names)
     val startupScope = rememberCoroutineScope()
@@ -121,7 +127,7 @@ fun SubscriptionFlowScreen(
                     println("SubscriptionFlow: Loading subscription products: ${IapConstants.SUBS_SKUS}")
                     iapStore.fetchProducts(
                         skus = IapConstants.SUBS_SKUS,
-                        type = ProductRequest.ProductRequestType.Subs
+                        type = ProductQueryType.Subs
                     )
                     iapStore.getAvailablePurchases()
                 }
@@ -155,7 +161,7 @@ fun SubscriptionFlowScreen(
                                     iapStore.setActivity(activity)
                                     iapStore.fetchProducts(
                                         skus = IapConstants.SUBS_SKUS,
-                                        type = ProductRequest.ProductRequestType.Subs
+                                        type = ProductQueryType.Subs
                                     )
                                 } catch (_: Exception) { }
                             }
@@ -247,7 +253,7 @@ fun SubscriptionFlowScreen(
             
             // Active Subscriptions Section
             // Treat any purchase with matching subscription SKU as subscribed
-            val activeSubscriptions = purchases.filter { it.productId in IapConstants.SUBS_SKUS }
+    val activeSubscriptions = androidPurchases.filter { it.productId in IapConstants.SUBS_SKUS }
             if (activeSubscriptions.isNotEmpty()) {
                 item {
                     SectionHeaderView(title = "Active Subscriptions")
@@ -276,19 +282,19 @@ fun SubscriptionFlowScreen(
             }
             
             // Available Subscription Products
-            if (products.isNotEmpty()) {
+            if (androidProducts.isNotEmpty()) {
                 item {
                     SectionHeaderView(title = "Available Subscriptions")
                 }
                 
-                items(products) { product ->
+                items(androidProducts) { product ->
                     ProductCard(
                         product = product,
                         isPurchasing = status.isPurchasing(product.id),
-                        isSubscribed = purchases.any { it.productId == product.id && it.purchaseState == OpenIapPurchase.PurchaseState.Purchased },
+                        isSubscribed = androidPurchases.any { it.productId == product.id && it.purchaseState == PurchaseState.Purchased },
                         onPurchase = {
                             // Prevent re-purchase if already subscribed
-                            val alreadySubscribed = purchases.any { it.productId == product.id && it.purchaseState == OpenIapPurchase.PurchaseState.Purchased }
+                            val alreadySubscribed = androidPurchases.any { it.productId == product.id && it.purchaseState == PurchaseState.Purchased }
                             if (alreadySubscribed) {
                                 iapStore.postStatusMessage(
                                     message = "Already subscribed to ${product.id}",
@@ -298,11 +304,11 @@ fun SubscriptionFlowScreen(
                                 return@ProductCard
                             }
                             scope.launch {
-                                val reqType = if (product.type == OpenIapProduct.ProductType.Subs)
-                                    ProductRequest.ProductRequestType.Subs else ProductRequest.ProductRequestType.InApp
+                                val reqType = if (product.type == ProductType.Subs)
+                                    ProductQueryType.Subs else ProductQueryType.InApp
                                 iapStore.setActivity(activity)
                                 iapStore.requestPurchase(
-                                    params = RequestPurchaseParams(skus = listOf(product.id)),
+                                    skus = listOf(product.id),
                                     type = reqType
                                 )
                             }
@@ -315,7 +321,7 @@ fun SubscriptionFlowScreen(
                         }
                     )
                 }
-            } else if (!status.isLoading && products.isEmpty()) {
+            } else if (!status.isLoading && androidProducts.isEmpty()) {
                 item {
                     EmptyStateCard(
                         message = "No subscription products available",
@@ -371,14 +377,14 @@ fun SubscriptionFlowScreen(
 
     // Auto-handle purchase: validate on server then finish (expo-iap style)
     // IMPORTANT: Implement real server-side receipt validation in validateReceiptOnServer()
-    suspend fun validateReceiptOnServer(purchase: OpenIapPurchase): Boolean {
+    suspend fun validateReceiptOnServer(purchase: PurchaseAndroid): Boolean {
         // TODO: Replace with your real backend API call
         // e.g., POST purchase.purchaseToken to your server and verify
         return true
     }
 
     LaunchedEffect(lastPurchase?.id) {
-        val purchase = lastPurchase ?: return@LaunchedEffect
+        val purchase = lastPurchase as? PurchaseAndroid ?: return@LaunchedEffect
         try {
             // 1) Server-side validation (replace with your backend call)
             val valid = validateReceiptOnServer(purchase)
@@ -393,7 +399,7 @@ fun SubscriptionFlowScreen(
             // 2) Determine consumable vs non-consumable (subs -> false)
             val product = products.find { it.id == purchase.productId }
             val isConsumable = product?.let {
-                it.type == OpenIapProduct.ProductType.InApp &&
+                it.type == ProductType.InApp &&
                         (it.id.contains("consumable", true) || it.id.contains("bulb", true))
             } == true
 
@@ -433,11 +439,11 @@ fun SubscriptionFlowScreen(
             onDismiss = { selectedProduct = null },
             onPurchase = {
                 uiScope.launch {
-                    val reqType = if (product.type == OpenIapProduct.ProductType.Subs)
-                        ProductRequest.ProductRequestType.Subs else ProductRequest.ProductRequestType.InApp
+                    val reqType = if (product.type == ProductType.Subs)
+                        ProductQueryType.Subs else ProductQueryType.InApp
                     iapStore.setActivity(activity)
                     iapStore.requestPurchase(
-                        params = RequestPurchaseParams(skus = listOf(product.id)),
+                        skus = listOf(product.id),
                         type = reqType
                     )
                 }

@@ -21,8 +21,9 @@ import androidx.navigation.NavController
 import dev.hyo.martie.models.AppColors
 import dev.hyo.martie.screens.uis.*
 import dev.hyo.openiap.IapContext
+import dev.hyo.openiap.PurchaseAndroid
+import dev.hyo.openiap.PurchaseState
 import dev.hyo.openiap.store.OpenIapStore
-import dev.hyo.openiap.models.*
 import dev.hyo.openiap.store.PurchaseResultStatus
 import kotlinx.coroutines.launch
 
@@ -39,9 +40,11 @@ fun AvailablePurchasesScreen(
     val status by iapStore.status.collectAsState()
     val connectionStatus by iapStore.connectionStatus.collectAsState()
     val statusMessage = status.lastPurchaseResult
-    
+
+    val androidPurchases = remember(purchases) { purchases.filterIsInstance<PurchaseAndroid>() }
+
     // Modal state
-    var selectedPurchase by remember { mutableStateOf<OpenIapPurchase?>(null) }
+    var selectedPurchase by remember { mutableStateOf<PurchaseAndroid?>(null) }
     
     // Initialize and connect on first composition (spec-aligned names)
     val startupScope = rememberCoroutineScope()
@@ -174,13 +177,13 @@ fun AvailablePurchasesScreen(
             }
             
             // Group purchases by type
-            val consumables = purchases.filter { 
+            val consumables = androidPurchases.filter { 
                 !it.isAutoRenewing && (
                     it.productId.contains("consumable", ignoreCase = true) ||
                     it.productId.contains("bulb", ignoreCase = true)
                 )
             }
-            val nonConsumables = purchases.filter { 
+            val nonConsumables = androidPurchases.filter { 
                 !it.isAutoRenewing && 
                 it.productId != "dev.hyo.martie.premium" &&
                 !(
@@ -188,12 +191,12 @@ fun AvailablePurchasesScreen(
                     it.productId.contains("bulb", ignoreCase = true)
                 )
             }
-            val subscriptions = purchases.filter { 
+            val subscriptions = androidPurchases.filter { 
                 it.isAutoRenewing || it.productId == "dev.hyo.martie.premium"
             }
             
             // Check for unfinished transactions (purchases that need acknowledgment/consumption)
-            val unfinishedPurchases = purchases.filter { purchase ->
+            val unfinishedPurchases = androidPurchases.filter { purchase ->
                 // TODO: In real implementation, check if purchase needs acknowledgment/consumption
                 // This would typically check: purchase.purchaseState == PurchaseState.Purchased && !purchase.isAcknowledged
                 // For demo purposes, let's assume some consumable purchases might need finishing
@@ -326,7 +329,7 @@ fun AvailablePurchasesScreen(
             }
             
             // Empty State
-            if (purchases.isEmpty() && !status.isLoading) {
+            if (androidPurchases.isEmpty() && !status.isLoading) {
                 item {
                     EmptyStateCard(
                         message = "No purchases found. Try restoring purchases from your Google account.",
@@ -336,7 +339,7 @@ fun AvailablePurchasesScreen(
             }
             
             // Statistics Card
-            if (purchases.isNotEmpty()) {
+            if (androidPurchases.isNotEmpty()) {
                 item {
                     Card(
                         modifier = Modifier
@@ -362,7 +365,7 @@ fun AvailablePurchasesScreen(
                                 horizontalArrangement = Arrangement.SpaceAround
                             ) {
                                 StatisticItem(
-                                    count = purchases.size,
+                                    count = androidPurchases.size,
                                     label = "Total",
                                     color = AppColors.primary
                                 )
@@ -451,7 +454,7 @@ enum class PurchaseType {
 
 @Composable
 fun PurchaseItemCard(
-    purchase: OpenIapPurchase,
+    purchase: PurchaseAndroid,
     type: PurchaseType,
     onClick: () -> Unit
 ) {
@@ -509,7 +512,7 @@ fun PurchaseItemCard(
                     )
                     
                     Text(
-                        "Purchased: ${java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date(purchase.transactionDate))}",
+                        "Purchased: ${java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date(purchase.transactionDate.toLong()))}",
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.textSecondary
                     )
@@ -567,7 +570,7 @@ fun StatisticItem(
 
 @Composable
 fun UnfinishedTransactionCard(
-    purchase: OpenIapPurchase,
+    purchase: PurchaseAndroid,
     onFinish: (Boolean) -> Unit,
     onClick: () -> Unit
 ) {
@@ -617,7 +620,7 @@ fun UnfinishedTransactionCard(
                     )
                     
                     Text(
-                        "Date: ${java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date(purchase.transactionDate))}",
+                        "Date: ${java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date(purchase.transactionDate.toLong()))}",
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.textSecondary
                     )
