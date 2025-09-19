@@ -1,31 +1,95 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-1.0.8}"
-REPO="https://github.com/hyodotdev/openiap-gql"
-ASSET="openiap-kotlin.zip"
-DOWNLOAD_URL="${REPO}/releases/download/${VERSION}/${ASSET}"
+VERSION=""
+SKIP_DOWNLOAD=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --skip-download)
+      SKIP_DOWNLOAD=true
+      shift
+      ;;
+    --version)
+      if [[ $# -lt 2 ]]; then
+        echo "--version requires an argument" >&2
+        exit 1
+      fi
+      VERSION="$2"
+      shift 2
+      ;;
+    --help)
+      cat <<'EOF'
+Usage: ./scripts/generate-types.sh [--version <tag>] [--skip-download]
+
+Options:
+  --version         Release tag to download from openiap-gql (default: VERSION file)
+  --skip-download   Reuse the existing Types.kt and only run post-processing
+EOF
+      exit 0
+      ;;
+    --*)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+    *)
+      if [[ -n "$VERSION" ]]; then
+        echo "Unexpected argument: $1" >&2
+        exit 1
+      fi
+      VERSION="$1"
+      shift
+      ;;
+  esac
+done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 TARGET_DIR="${REPO_ROOT}/openiap/src/main/java/dev/hyo/openiap"
 TARGET_FILE="${TARGET_DIR}/Types.kt"
+VERSION_FILE="${REPO_ROOT}/VERSION"
 
-TMP_DIR="$(mktemp -d)"
-cleanup() {
-  rm -rf "${TMP_DIR}"
-}
-trap cleanup EXIT
+if [[ -z "$VERSION" ]] && [[ -f "$VERSION_FILE" ]]; then
+  VERSION="$(head -n1 "$VERSION_FILE" | tr -d ' \r')"
+fi
 
-printf 'Downloading %s\n' "${DOWNLOAD_URL}"
-curl -fL "${DOWNLOAD_URL}" -o "${TMP_DIR}/${ASSET}"
+if [[ -z "$VERSION" ]]; then
+  echo "Unable to determine version. Provide --version or make sure VERSION file exists." >&2
+  exit 1
+fi
 
-printf 'Extracting Types.kt\n'
-unzip -q "${TMP_DIR}/${ASSET}" -d "${TMP_DIR}"
+REPO="https://github.com/hyodotdev/openiap-gql"
+ASSET="openiap-kotlin.zip"
+DOWNLOAD_URL="${REPO}/releases/download/${VERSION}/${ASSET}"
 
 mkdir -p "${TARGET_DIR}"
-rm -f "${TARGET_FILE}"
-cp "${TMP_DIR}/Types.kt" "${TARGET_FILE}"
+
+TMP_DIR=""
+cleanup() {
+  if [[ -n "$TMP_DIR" && -d "$TMP_DIR" ]]; then
+    rm -rf "$TMP_DIR"
+  fi
+}
+
+if [[ "$SKIP_DOWNLOAD" == false ]]; then
+  TMP_DIR="$(mktemp -d)"
+  trap cleanup EXIT
+
+  printf 'Downloading %s\n' "${DOWNLOAD_URL}"
+  curl -fL "${DOWNLOAD_URL}" -o "${TMP_DIR}/${ASSET}"
+
+  printf 'Extracting Types.kt\n'
+  unzip -q "${TMP_DIR}/${ASSET}" -d "${TMP_DIR}"
+
+  rm -f "${TARGET_FILE}"
+  cp "${TMP_DIR}/Types.kt" "${TARGET_FILE}"
+else
+  if [[ ! -f "${TARGET_FILE}" ]]; then
+    echo "Types.kt not found at ${TARGET_FILE}; cannot skip download" >&2
+    exit 1
+  fi
+  printf 'Skipping download; reusing existing %s\n' "${TARGET_FILE}"
+fi
 
 # Patch known Kotlin formatting issues in the upstream artifact so the file compiles
 TARGET_FILE="${TARGET_FILE}" python3 <<'PY'

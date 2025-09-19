@@ -53,6 +53,7 @@ dependencies {
     
     // Google Play Billing Library (align with app/lib v8)
     api("com.android.billingclient:billing-ktx:8.0.0")
+    api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
