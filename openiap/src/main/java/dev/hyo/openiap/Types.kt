@@ -3,7 +3,7 @@
 // Run `npm run generate` after updating any *.graphql schema file.
 // ============================================================================
 
-@file:Suppress("unused")
+@file:Suppress("unused", "UNCHECKED_CAST")
 package dev.hyo.openiap
 
 // MARK: - Enums
