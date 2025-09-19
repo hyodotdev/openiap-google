@@ -12,11 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.hyo.martie.models.AppColors
-import dev.hyo.openiap.models.OpenIapPurchase
+import dev.hyo.openiap.PurchaseAndroid
 
 @Composable
 fun ActivePurchaseCard(
-    purchase: OpenIapPurchase,
+    purchase: PurchaseAndroid,
     onClick: () -> Unit = {}
 ) {
     Card(
@@ -47,7 +47,7 @@ fun ActivePurchaseCard(
                 )
                 
                 Text(
-                    "State: ${purchase.purchaseState.value}",
+                    "State: ${purchase.purchaseState.rawValue}",
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textSecondary
                 )

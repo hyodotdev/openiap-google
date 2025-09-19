@@ -11,11 +11,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.hyo.martie.models.AppColors
-import dev.hyo.openiap.models.OpenIapProduct
+import dev.hyo.openiap.ProductAndroid
+import dev.hyo.openiap.ProductType
+import java.util.Locale
 
 @Composable
 fun ProductCard(
-    product: OpenIapProduct,
+    product: ProductAndroid,
     isPurchasing: Boolean = false,
     onPurchase: () -> Unit,
     onClick: () -> Unit = {},
@@ -65,16 +67,16 @@ fun ProductCard(
                     Surface(
                         shape = RoundedCornerShape(4.dp),
                         color = when (product.type) {
-                            OpenIapProduct.ProductType.Subs -> AppColors.secondary
+                            ProductType.Subs -> AppColors.secondary
                             else -> AppColors.primary
                         }.copy(alpha = 0.2f)
                     ) {
                         Text(
-                            product.type.value.uppercase(),
+                            product.type.rawValue.uppercase(Locale.getDefault()),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = when (product.type) {
-                                OpenIapProduct.ProductType.Subs -> AppColors.secondary
+                                ProductType.Subs -> AppColors.secondary
                                 else -> AppColors.primary
                             }
                         )

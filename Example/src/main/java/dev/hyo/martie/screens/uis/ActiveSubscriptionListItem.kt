@@ -17,11 +17,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.hyo.martie.models.AppColors
-import dev.hyo.openiap.models.OpenIapPurchase
+import dev.hyo.openiap.PurchaseAndroid
 
 @Composable
 fun ActiveSubscriptionListItem(
-    purchase: OpenIapPurchase,
+    purchase: PurchaseAndroid,
     statusText: String? = null,
     onClick: () -> Unit = {}
 ) {
@@ -84,7 +84,7 @@ fun ActiveSubscriptionListItem(
                 }
 
                 Text(
-                    "Purchased: ${java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date(purchase.transactionDate))}",
+                    "Purchased: ${java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date(purchase.transactionDate.toLong()))}",
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textSecondary
                 )
