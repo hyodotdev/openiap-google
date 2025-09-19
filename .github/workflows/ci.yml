@@ -49,6 +49,10 @@ jobs:
             "build-tools;34.0.0"
           yes | sdkmanager --licenses
 
+      - name: Verify generated Types.kt is up to date
+        run: |
+          ./scripts/generate-types.sh
+          git diff --exit-code openiap/src/main/java/dev/hyo/openiap/Types.kt
+
       - name: Build library and example
         run: ./gradlew --stacktrace --no-daemon :openiap:build :Example:assembleDebug
-
