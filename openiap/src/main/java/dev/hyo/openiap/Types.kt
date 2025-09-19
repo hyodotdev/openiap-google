@@ -4,83 +4,116 @@
 // ============================================================================
 
 @file:Suppress("unused")
-
 package dev.hyo.openiap
 
 // MARK: - Enums
 
 public enum class ErrorCode(val rawValue: String) {
-    Unknown("UNKNOWN"),
-    UserCancelled("USER_CANCELLED"),
-    UserError("USER_ERROR"),
-    ItemUnavailable("ITEM_UNAVAILABLE"),
-    RemoteError("REMOTE_ERROR"),
-    NetworkError("NETWORK_ERROR"),
-    ServiceError("SERVICE_ERROR"),
-    ReceiptFailed("RECEIPT_FAILED"),
-    ReceiptFinished("RECEIPT_FINISHED"),
-    ReceiptFinishedFailed("RECEIPT_FINISHED_FAILED"),
-    NotPrepared("NOT_PREPARED"),
-    NotEnded("NOT_ENDED"),
-    AlreadyOwned("ALREADY_OWNED"),
-    DeveloperError("DEVELOPER_ERROR"),
-    BillingResponseJsonParseError("BILLING_RESPONSE_JSON_PARSE_ERROR"),
-    DeferredPayment("DEFERRED_PAYMENT"),
-    Interrupted("INTERRUPTED"),
-    IapNotAvailable("IAP_NOT_AVAILABLE"),
-    PurchaseError("PURCHASE_ERROR"),
-    SyncError("SYNC_ERROR"),
-    TransactionValidationFailed("TRANSACTION_VALIDATION_FAILED"),
-    ActivityUnavailable("ACTIVITY_UNAVAILABLE"),
-    AlreadyPrepared("ALREADY_PREPARED"),
-    Pending("PENDING"),
-    ConnectionClosed("CONNECTION_CLOSED"),
-    InitConnection("INIT_CONNECTION"),
-    ServiceDisconnected("SERVICE_DISCONNECTED"),
-    QueryProduct("QUERY_PRODUCT"),
-    SkuNotFound("SKU_NOT_FOUND"),
-    SkuOfferMismatch("SKU_OFFER_MISMATCH"),
-    ItemNotOwned("ITEM_NOT_OWNED"),
-    BillingUnavailable("BILLING_UNAVAILABLE"),
-    FeatureNotSupported("FEATURE_NOT_SUPPORTED"),
-    EmptySkuList("EMPTY_SKU_LIST");
+    Unknown("unknown"),
+    UserCancelled("user-cancelled"),
+    UserError("user-error"),
+    ItemUnavailable("item-unavailable"),
+    RemoteError("remote-error"),
+    NetworkError("network-error"),
+    ServiceError("service-error"),
+    ReceiptFailed("receipt-failed"),
+    ReceiptFinished("receipt-finished"),
+    ReceiptFinishedFailed("receipt-finished-failed"),
+    NotPrepared("not-prepared"),
+    NotEnded("not-ended"),
+    AlreadyOwned("already-owned"),
+    DeveloperError("developer-error"),
+    BillingResponseJsonParseError("billing-response-json-parse-error"),
+    DeferredPayment("deferred-payment"),
+    Interrupted("interrupted"),
+    IapNotAvailable("iap-not-available"),
+    PurchaseError("purchase-error"),
+    SyncError("sync-error"),
+    TransactionValidationFailed("transaction-validation-failed"),
+    ActivityUnavailable("activity-unavailable"),
+    AlreadyPrepared("already-prepared"),
+    Pending("pending"),
+    ConnectionClosed("connection-closed"),
+    InitConnection("init-connection"),
+    ServiceDisconnected("service-disconnected"),
+    QueryProduct("query-product"),
+    SkuNotFound("sku-not-found"),
+    SkuOfferMismatch("sku-offer-mismatch"),
+    ItemNotOwned("item-not-owned"),
+    BillingUnavailable("billing-unavailable"),
+    FeatureNotSupported("feature-not-supported"),
+    EmptySkuList("empty-sku-list");
 
     companion object {
         fun fromJson(value: String): ErrorCode = when (value) {
-            "UNKNOWN" -> ErrorCode.Unknown
-            "USER_CANCELLED" -> ErrorCode.UserCancelled
-            "USER_ERROR" -> ErrorCode.UserError
-            "ITEM_UNAVAILABLE" -> ErrorCode.ItemUnavailable
-            "REMOTE_ERROR" -> ErrorCode.RemoteError
-            "NETWORK_ERROR" -> ErrorCode.NetworkError
-            "SERVICE_ERROR" -> ErrorCode.ServiceError
-            "RECEIPT_FAILED" -> ErrorCode.ReceiptFailed
-            "RECEIPT_FINISHED" -> ErrorCode.ReceiptFinished
-            "RECEIPT_FINISHED_FAILED" -> ErrorCode.ReceiptFinishedFailed
-            "NOT_PREPARED" -> ErrorCode.NotPrepared
-            "NOT_ENDED" -> ErrorCode.NotEnded
-            "ALREADY_OWNED" -> ErrorCode.AlreadyOwned
-            "DEVELOPER_ERROR" -> ErrorCode.DeveloperError
-            "BILLING_RESPONSE_JSON_PARSE_ERROR" -> ErrorCode.BillingResponseJsonParseError
-            "DEFERRED_PAYMENT" -> ErrorCode.DeferredPayment
-            "INTERRUPTED" -> ErrorCode.Interrupted
-            "IAP_NOT_AVAILABLE" -> ErrorCode.IapNotAvailable
-            "PURCHASE_ERROR" -> ErrorCode.PurchaseError
-            "SYNC_ERROR" -> ErrorCode.SyncError
-            "TRANSACTION_VALIDATION_FAILED" -> ErrorCode.TransactionValidationFailed
-            "ACTIVITY_UNAVAILABLE" -> ErrorCode.ActivityUnavailable
-            "ALREADY_PREPARED" -> ErrorCode.AlreadyPrepared
-            "PENDING" -> ErrorCode.Pending
-            "CONNECTION_CLOSED" -> ErrorCode.ConnectionClosed
-            "INIT_CONNECTION" -> ErrorCode.InitConnection
-            "SERVICE_DISCONNECTED" -> ErrorCode.ServiceDisconnected
-            "QUERY_PRODUCT" -> ErrorCode.QueryProduct
-            "SKU_NOT_FOUND" -> ErrorCode.SkuNotFound
-            "SKU_OFFER_MISMATCH" -> ErrorCode.SkuOfferMismatch
-            "ITEM_NOT_OWNED" -> ErrorCode.ItemNotOwned
-            "BILLING_UNAVAILABLE" -> ErrorCode.BillingUnavailable
-            "FEATURE_NOT_SUPPORTED" -> ErrorCode.FeatureNotSupported
-            "EMPTY_SKU_LIST" -> ErrorCode.EmptySkuList
+            "unknown" -> ErrorCode.Unknown
+            "Unknown" -> ErrorCode.Unknown
+            "user-cancelled" -> ErrorCode.UserCancelled
+            "UserCancelled" -> ErrorCode.UserCancelled
+            "user-error" -> ErrorCode.UserError
+            "UserError" -> ErrorCode.UserError
+            "item-unavailable" -> ErrorCode.ItemUnavailable
+            "ItemUnavailable" -> ErrorCode.ItemUnavailable
+            "remote-error" -> ErrorCode.RemoteError
+            "RemoteError" -> ErrorCode.RemoteError
+            "network-error" -> ErrorCode.NetworkError
+            "NetworkError" -> ErrorCode.NetworkError
+            "service-error" -> ErrorCode.ServiceError
+            "ServiceError" -> ErrorCode.ServiceError
+            "receipt-failed" -> ErrorCode.ReceiptFailed
+            "ReceiptFailed" -> ErrorCode.ReceiptFailed
+            "receipt-finished" -> ErrorCode.ReceiptFinished
+            "ReceiptFinished" -> ErrorCode.ReceiptFinished
+            "receipt-finished-failed" -> ErrorCode.ReceiptFinishedFailed
+            "ReceiptFinishedFailed" -> ErrorCode.ReceiptFinishedFailed
+            "not-prepared" -> ErrorCode.NotPrepared
+            "NotPrepared" -> ErrorCode.NotPrepared
+            "not-ended" -> ErrorCode.NotEnded
+            "NotEnded" -> ErrorCode.NotEnded
+            "already-owned" -> ErrorCode.AlreadyOwned
+            "AlreadyOwned" -> ErrorCode.AlreadyOwned
+            "developer-error" -> ErrorCode.DeveloperError
+            "DeveloperError" -> ErrorCode.DeveloperError
+            "billing-response-json-parse-error" -> ErrorCode.BillingResponseJsonParseError
+            "BillingResponseJsonParseError" -> ErrorCode.BillingResponseJsonParseError
+            "deferred-payment" -> ErrorCode.DeferredPayment
+            "DeferredPayment" -> ErrorCode.DeferredPayment
+            "interrupted" -> ErrorCode.Interrupted
+            "Interrupted" -> ErrorCode.Interrupted
+            "iap-not-available" -> ErrorCode.IapNotAvailable
+            "IapNotAvailable" -> ErrorCode.IapNotAvailable
+            "purchase-error" -> ErrorCode.PurchaseError
+            "PurchaseError" -> ErrorCode.PurchaseError
+            "sync-error" -> ErrorCode.SyncError
+            "SyncError" -> ErrorCode.SyncError
+            "transaction-validation-failed" -> ErrorCode.TransactionValidationFailed
+            "TransactionValidationFailed" -> ErrorCode.TransactionValidationFailed
+            "activity-unavailable" -> ErrorCode.ActivityUnavailable
+            "ActivityUnavailable" -> ErrorCode.ActivityUnavailable
+            "already-prepared" -> ErrorCode.AlreadyPrepared
+            "AlreadyPrepared" -> ErrorCode.AlreadyPrepared
+            "pending" -> ErrorCode.Pending
+            "Pending" -> ErrorCode.Pending
+            "connection-closed" -> ErrorCode.ConnectionClosed
+            "ConnectionClosed" -> ErrorCode.ConnectionClosed
+            "init-connection" -> ErrorCode.InitConnection
+            "InitConnection" -> ErrorCode.InitConnection
+            "service-disconnected" -> ErrorCode.ServiceDisconnected
+            "ServiceDisconnected" -> ErrorCode.ServiceDisconnected
+            "query-product" -> ErrorCode.QueryProduct
+            "QueryProduct" -> ErrorCode.QueryProduct
+            "sku-not-found" -> ErrorCode.SkuNotFound
+            "SkuNotFound" -> ErrorCode.SkuNotFound
+            "sku-offer-mismatch" -> ErrorCode.SkuOfferMismatch
+            "SkuOfferMismatch" -> ErrorCode.SkuOfferMismatch
+            "item-not-owned" -> ErrorCode.ItemNotOwned
+            "ItemNotOwned" -> ErrorCode.ItemNotOwned
+            "billing-unavailable" -> ErrorCode.BillingUnavailable
+            "BillingUnavailable" -> ErrorCode.BillingUnavailable
+            "feature-not-supported" -> ErrorCode.FeatureNotSupported
+            "FeatureNotSupported" -> ErrorCode.FeatureNotSupported
+            "empty-sku-list" -> ErrorCode.EmptySkuList
+            "EmptySkuList" -> ErrorCode.EmptySkuList
             else -> throw IllegalArgumentException("Unknown ErrorCode value: $value")
         }
     }
@@ -89,15 +122,21 @@ public enum class ErrorCode(val rawValue: String) {
 }
 
 public enum class IapEvent(val rawValue: String) {
-    PurchaseUpdated("PURCHASE_UPDATED"),
-    PurchaseError("PURCHASE_ERROR"),
-    PromotedProductIos("PROMOTED_PRODUCT_IOS");
+    PurchaseUpdated("purchase-updated"),
+    PurchaseError("purchase-error"),
+    PromotedProductIos("promoted-product-ios");
 
     companion object {
         fun fromJson(value: String): IapEvent = when (value) {
+            "purchase-updated" -> IapEvent.PurchaseUpdated
             "PURCHASE_UPDATED" -> IapEvent.PurchaseUpdated
+            "PurchaseUpdated" -> IapEvent.PurchaseUpdated
+            "purchase-error" -> IapEvent.PurchaseError
             "PURCHASE_ERROR" -> IapEvent.PurchaseError
+            "PurchaseError" -> IapEvent.PurchaseError
+            "promoted-product-ios" -> IapEvent.PromotedProductIos
             "PROMOTED_PRODUCT_IOS" -> IapEvent.PromotedProductIos
+            "PromotedProductIOS" -> IapEvent.PromotedProductIos
             else -> throw IllegalArgumentException("Unknown IapEvent value: $value")
         }
     }
@@ -106,13 +145,16 @@ public enum class IapEvent(val rawValue: String) {
 }
 
 public enum class IapPlatform(val rawValue: String) {
-    Ios("IOS"),
-    Android("ANDROID");
+    Ios("ios"),
+    Android("android");
 
     companion object {
         fun fromJson(value: String): IapPlatform = when (value) {
+            "ios" -> IapPlatform.Ios
             "IOS" -> IapPlatform.Ios
+            "android" -> IapPlatform.Android
             "ANDROID" -> IapPlatform.Android
+            "Android" -> IapPlatform.Android
             else -> throw IllegalArgumentException("Unknown IapPlatform value: $value")
         }
     }
@@ -121,17 +163,21 @@ public enum class IapPlatform(val rawValue: String) {
 }
 
 public enum class PaymentModeIOS(val rawValue: String) {
-    Empty("EMPTY"),
-    FreeTrial("FREE_TRIAL"),
-    PayAsYouGo("PAY_AS_YOU_GO"),
-    PayUpFront("PAY_UP_FRONT");
+    Empty("empty"),
+    FreeTrial("free-trial"),
+    PayAsYouGo("pay-as-you-go"),
+    PayUpFront("pay-up-front");
 
     companion object {
         fun fromJson(value: String): PaymentModeIOS = when (value) {
-            "EMPTY" -> PaymentModeIOS.Empty
-            "FREE_TRIAL" -> PaymentModeIOS.FreeTrial
-            "PAY_AS_YOU_GO" -> PaymentModeIOS.PayAsYouGo
-            "PAY_UP_FRONT" -> PaymentModeIOS.PayUpFront
+            "empty" -> PaymentModeIOS.Empty
+            "Empty" -> PaymentModeIOS.Empty
+            "free-trial" -> PaymentModeIOS.FreeTrial
+            "FreeTrial" -> PaymentModeIOS.FreeTrial
+            "pay-as-you-go" -> PaymentModeIOS.PayAsYouGo
+            "PayAsYouGo" -> PaymentModeIOS.PayAsYouGo
+            "pay-up-front" -> PaymentModeIOS.PayUpFront
+            "PayUpFront" -> PaymentModeIOS.PayUpFront
             else -> throw IllegalArgumentException("Unknown PaymentModeIOS value: $value")
         }
     }
@@ -140,15 +186,18 @@ public enum class PaymentModeIOS(val rawValue: String) {
 }
 
 public enum class ProductQueryType(val rawValue: String) {
-    InApp("IN_APP"),
-    Subs("SUBS"),
-    All("ALL");
+    InApp("in-app"),
+    Subs("subs"),
+    All("all");
 
     companion object {
         fun fromJson(value: String): ProductQueryType = when (value) {
-            "IN_APP" -> ProductQueryType.InApp
-            "SUBS" -> ProductQueryType.Subs
-            "ALL" -> ProductQueryType.All
+            "in-app" -> ProductQueryType.InApp
+            "InApp" -> ProductQueryType.InApp
+            "subs" -> ProductQueryType.Subs
+            "Subs" -> ProductQueryType.Subs
+            "all" -> ProductQueryType.All
+            "All" -> ProductQueryType.All
             else -> throw IllegalArgumentException("Unknown ProductQueryType value: $value")
         }
     }
@@ -157,13 +206,15 @@ public enum class ProductQueryType(val rawValue: String) {
 }
 
 public enum class ProductType(val rawValue: String) {
-    InApp("IN_APP"),
-    Subs("SUBS");
+    InApp("in-app"),
+    Subs("subs");
 
     companion object {
         fun fromJson(value: String): ProductType = when (value) {
-            "IN_APP" -> ProductType.InApp
-            "SUBS" -> ProductType.Subs
+            "in-app" -> ProductType.InApp
+            "InApp" -> ProductType.InApp
+            "subs" -> ProductType.Subs
+            "Subs" -> ProductType.Subs
             else -> throw IllegalArgumentException("Unknown ProductType value: $value")
         }
     }
@@ -172,17 +223,21 @@ public enum class ProductType(val rawValue: String) {
 }
 
 public enum class ProductTypeIOS(val rawValue: String) {
-    Consumable("CONSUMABLE"),
-    NonConsumable("NON_CONSUMABLE"),
-    AutoRenewableSubscription("AUTO_RENEWABLE_SUBSCRIPTION"),
-    NonRenewingSubscription("NON_RENEWING_SUBSCRIPTION");
+    Consumable("consumable"),
+    NonConsumable("non-consumable"),
+    AutoRenewableSubscription("auto-renewable-subscription"),
+    NonRenewingSubscription("non-renewing-subscription");
 
     companion object {
         fun fromJson(value: String): ProductTypeIOS = when (value) {
-            "CONSUMABLE" -> ProductTypeIOS.Consumable
-            "NON_CONSUMABLE" -> ProductTypeIOS.NonConsumable
-            "AUTO_RENEWABLE_SUBSCRIPTION" -> ProductTypeIOS.AutoRenewableSubscription
-            "NON_RENEWING_SUBSCRIPTION" -> ProductTypeIOS.NonRenewingSubscription
+            "consumable" -> ProductTypeIOS.Consumable
+            "Consumable" -> ProductTypeIOS.Consumable
+            "non-consumable" -> ProductTypeIOS.NonConsumable
+            "NonConsumable" -> ProductTypeIOS.NonConsumable
+            "auto-renewable-subscription" -> ProductTypeIOS.AutoRenewableSubscription
+            "AutoRenewableSubscription" -> ProductTypeIOS.AutoRenewableSubscription
+            "non-renewing-subscription" -> ProductTypeIOS.NonRenewingSubscription
+            "NonRenewingSubscription" -> ProductTypeIOS.NonRenewingSubscription
             else -> throw IllegalArgumentException("Unknown ProductTypeIOS value: $value")
         }
     }
@@ -191,21 +246,27 @@ public enum class ProductTypeIOS(val rawValue: String) {
 }
 
 public enum class PurchaseState(val rawValue: String) {
-    Pending("PENDING"),
-    Purchased("PURCHASED"),
-    Failed("FAILED"),
-    Restored("RESTORED"),
-    Deferred("DEFERRED"),
-    Unknown("UNKNOWN");
+    Pending("pending"),
+    Purchased("purchased"),
+    Failed("failed"),
+    Restored("restored"),
+    Deferred("deferred"),
+    Unknown("unknown");
 
     companion object {
         fun fromJson(value: String): PurchaseState = when (value) {
-            "PENDING" -> PurchaseState.Pending
-            "PURCHASED" -> PurchaseState.Purchased
-            "FAILED" -> PurchaseState.Failed
-            "RESTORED" -> PurchaseState.Restored
-            "DEFERRED" -> PurchaseState.Deferred
-            "UNKNOWN" -> PurchaseState.Unknown
+            "pending" -> PurchaseState.Pending
+            "Pending" -> PurchaseState.Pending
+            "purchased" -> PurchaseState.Purchased
+            "Purchased" -> PurchaseState.Purchased
+            "failed" -> PurchaseState.Failed
+            "Failed" -> PurchaseState.Failed
+            "restored" -> PurchaseState.Restored
+            "Restored" -> PurchaseState.Restored
+            "deferred" -> PurchaseState.Deferred
+            "Deferred" -> PurchaseState.Deferred
+            "unknown" -> PurchaseState.Unknown
+            "Unknown" -> PurchaseState.Unknown
             else -> throw IllegalArgumentException("Unknown PurchaseState value: $value")
         }
     }
@@ -214,13 +275,15 @@ public enum class PurchaseState(val rawValue: String) {
 }
 
 public enum class SubscriptionOfferTypeIOS(val rawValue: String) {
-    Introductory("INTRODUCTORY"),
-    Promotional("PROMOTIONAL");
+    Introductory("introductory"),
+    Promotional("promotional");
 
     companion object {
         fun fromJson(value: String): SubscriptionOfferTypeIOS = when (value) {
-            "INTRODUCTORY" -> SubscriptionOfferTypeIOS.Introductory
-            "PROMOTIONAL" -> SubscriptionOfferTypeIOS.Promotional
+            "introductory" -> SubscriptionOfferTypeIOS.Introductory
+            "Introductory" -> SubscriptionOfferTypeIOS.Introductory
+            "promotional" -> SubscriptionOfferTypeIOS.Promotional
+            "Promotional" -> SubscriptionOfferTypeIOS.Promotional
             else -> throw IllegalArgumentException("Unknown SubscriptionOfferTypeIOS value: $value")
         }
     }
@@ -229,19 +292,24 @@ public enum class SubscriptionOfferTypeIOS(val rawValue: String) {
 }
 
 public enum class SubscriptionPeriodIOS(val rawValue: String) {
-    Day("DAY"),
-    Week("WEEK"),
-    Month("MONTH"),
-    Year("YEAR"),
-    Empty("EMPTY");
+    Day("day"),
+    Week("week"),
+    Month("month"),
+    Year("year"),
+    Empty("empty");
 
     companion object {
         fun fromJson(value: String): SubscriptionPeriodIOS = when (value) {
-            "DAY" -> SubscriptionPeriodIOS.Day
-            "WEEK" -> SubscriptionPeriodIOS.Week
-            "MONTH" -> SubscriptionPeriodIOS.Month
-            "YEAR" -> SubscriptionPeriodIOS.Year
-            "EMPTY" -> SubscriptionPeriodIOS.Empty
+            "day" -> SubscriptionPeriodIOS.Day
+            "Day" -> SubscriptionPeriodIOS.Day
+            "week" -> SubscriptionPeriodIOS.Week
+            "Week" -> SubscriptionPeriodIOS.Week
+            "month" -> SubscriptionPeriodIOS.Month
+            "Month" -> SubscriptionPeriodIOS.Month
+            "year" -> SubscriptionPeriodIOS.Year
+            "Year" -> SubscriptionPeriodIOS.Year
+            "empty" -> SubscriptionPeriodIOS.Empty
+            "Empty" -> SubscriptionPeriodIOS.Empty
             else -> throw IllegalArgumentException("Unknown SubscriptionPeriodIOS value: $value")
         }
     }

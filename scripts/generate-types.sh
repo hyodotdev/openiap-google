@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-1.0.7}"
+VERSION="${1:-1.0.8}"
 REPO="https://github.com/hyodotdev/openiap-gql"
 ASSET="openiap-kotlin.zip"
 DOWNLOAD_URL="${REPO}/releases/download/${VERSION}/${ASSET}"
@@ -64,17 +64,6 @@ if annotation_indices and annotation_indices[0] > package_idx:
     for offset, line in enumerate(annotation_block):
         lines.insert(package_idx + offset, line)
     package_idx += len(annotation_block)
-
-# Ensure there is exactly one blank line between annotations and the package declaration
-package_idx = first_index(lambda line: line.startswith('package '))
-if package_idx is not None:
-    before_idx = package_idx - 1
-    if before_idx >= 0 and lines[before_idx].strip():
-        lines.insert(package_idx, '')
-        package_idx += 1
-    after_idx = package_idx + 1
-    if after_idx >= len(lines) or lines[after_idx].strip():
-        lines.insert(package_idx + 1, '')
 
 text = '\n'.join(lines)
 
@@ -151,6 +140,106 @@ def patch_class(match):
 
 
 text = class_pattern.sub(patch_class, text)
+
+lines = text.splitlines()
+
+pattern1 = re.compile(r'(.)([A-Z][a-z0-9]+)')
+pattern2 = re.compile(r'([a-z0-9])([A-Z])')
+
+
+def camel_to_kebab(name: str) -> str:
+    s1 = pattern1.sub(r'\1-\2', name)
+    s2 = pattern2.sub(r'\1-\2', s1)
+    return s2.replace('_', '-').lower()
+
+
+i = 0
+while i < len(lines):
+    line = lines[i]
+    header_match = re.match(r'^public enum class (\w+)\(val rawValue: String\) \{$', line)
+    if not header_match:
+        i += 1
+        continue
+    enum_name = header_match.group(1)
+
+    constant_indices = []
+    j = i + 1
+    while j < len(lines):
+        constant_indices.append(j)
+        if lines[j].strip().endswith(';'):
+            break
+        j += 1
+    if not constant_indices:
+        i = j
+        continue
+
+    constants = []
+    for idx in constant_indices:
+        const_line = lines[idx]
+        match = re.match(r'^(\s*)(\w+)\("([^"]+)"\)(,|;)$', const_line)
+        if not match:
+            continue
+        indent, name, old_raw, trailing = match.groups()
+        new_raw = camel_to_kebab(name)
+        constants.append(
+            {
+                "index": idx,
+                "indent": indent,
+                "name": name,
+                "old_raw": old_raw,
+                "new_raw": new_raw,
+                "trailing": trailing,
+            }
+        )
+        if old_raw != new_raw:
+            lines[idx] = f'{indent}{name}("{new_raw}"){trailing}'
+
+    k = j + 1
+    while k < len(lines) and 'when (value)' not in lines[k]:
+        k += 1
+    if k >= len(lines):
+        i = j
+        continue
+
+    case_start = k + 1
+    else_idx = case_start
+    while else_idx < len(lines) and 'else ->' not in lines[else_idx]:
+        else_idx += 1
+    if else_idx >= len(lines):
+        i = j
+        continue
+
+    while case_start < else_idx and not lines[case_start].strip():
+        case_start += 1
+    if case_start >= else_idx:
+        i = else_idx
+        continue
+
+    indent_match = re.match(r'^(\s*)', lines[case_start])
+    case_indent = indent_match.group(1) if indent_match else ' ' * 12
+
+    new_case_lines = []
+    for const in constants:
+        seen = set()
+        candidates = [const["new_raw"], const["old_raw"], const["name"]]
+        if const["name"].endswith("Ios"):
+            ios_upper = const["name"][:-3] + "IOS"
+            if ios_upper:
+                candidates.append(ios_upper)
+        for candidate in candidates:
+            if candidate and candidate not in seen:
+                new_case_lines.append(
+                    f'{case_indent}"{candidate}" -> {enum_name}.{const["name"]}'
+                )
+                seen.add(candidate)
+
+    lines[case_start:else_idx] = new_case_lines
+    i = else_idx
+
+text = '\n'.join(lines)
+if not text.endswith('\n'):
+    text += '\n'
+
 target.write_text(text)
 PY
 
