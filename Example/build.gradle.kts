@@ -17,6 +17,14 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+
+        val store = (project.findProperty("EXAMPLE_OPENIAP_STORE") as String?) ?: "play"
+        buildConfigField("String", "OPENIAP_STORE", "\"${store}\"")
+
+        val appId = (project.findProperty("EXAMPLE_HORIZON_APP_ID") as String?)
+            ?: (project.findProperty("EXAMPLE_OPENIAP_APP_ID") as String?)
+            ?: ""
+        buildConfigField("String", "HORIZON_APP_ID", "\"${appId}\"")
     }
 
     buildTypes {
@@ -44,6 +52,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

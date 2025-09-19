@@ -29,6 +29,7 @@ OpenIAP GMS is a modern, type-safe Kotlin library that simplifies Google Play in
 - 🔐 **Google Play Billing v8** - Latest billing library with enhanced security
 - ⚡ **Kotlin Coroutines** - Modern async/await API
 - 🎯 **Type Safe** - Full Kotlin type safety with sealed classes
+- 🥽 **Meta Horizon OS Support** - Optional compatibility SDK integration alongside Play Billing
 - 🔄 **Real-time Events** - Purchase update and error listeners
 - 🧵 **Thread Safe** - Concurrent operations with proper synchronization
 - 📱 **Easy Integration** - Simple singleton pattern with context management
@@ -51,6 +52,21 @@ dependencies {
     implementation("io.github.hyochan.openiap:openiap-google:1.1.12")
 }
 ```
+
+### Optional provider configuration
+
+Set the target billing provider via `BuildConfig` fields (default is `play`). The library will also auto-detect Horizon hardware when `auto` is supplied.
+
+```kotlin
+android {
+    defaultConfig {
+        buildConfigField("String", "OPENIAP_STORE", "\"auto\"") // play | horizon | auto
+        buildConfigField("String", "HORIZON_APP_ID", "\"YOUR_APP_ID\"")
+    }
+}
+```
+
+The example app reads the same values via `EXAMPLE_OPENIAP_STORE` / `EXAMPLE_HORIZON_APP_ID` Gradle properties for quick testing.
 
 Or `build.gradle`:
 

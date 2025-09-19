@@ -47,7 +47,12 @@ fun PurchaseFlowScreen(
     val activity = context as? Activity
     val uiScope = rememberCoroutineScope()
     val appContext = context.applicationContext as Context
-    val iapStore = storeParam ?: remember(appContext) { OpenIapStore(appContext) }
+    val iapStore = storeParam ?: remember(appContext) {
+        val storeKey = dev.hyo.martie.BuildConfig.OPENIAP_STORE
+        val appId = dev.hyo.martie.BuildConfig.HORIZON_APP_ID
+        runCatching { OpenIapStore(appContext, storeKey, appId) }
+            .getOrElse { OpenIapStore(appContext, "auto", appId) }
+    }
     val products by iapStore.products.collectAsState()
     val purchases by iapStore.availablePurchases.collectAsState()
     val androidProducts = remember(products) { products.filterIsInstance<ProductAndroid>() }

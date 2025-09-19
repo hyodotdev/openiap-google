@@ -24,23 +24,27 @@ import dev.hyo.openiap.RequestPurchaseResultPurchase
 import dev.hyo.openiap.RequestPurchaseResultPurchases
 import android.app.Activity
 import android.content.Context
-import com.android.billingclient.api.BillingClient
 import dev.hyo.openiap.OpenIapError
 import dev.hyo.openiap.OpenIapModule
+import dev.hyo.openiap.OpenIapProtocol
+import dev.hyo.openiap.horizon.OpenIapHorizonModule
 import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
 import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
 import dev.hyo.openiap.utils.toProduct
+import io.github.hyochan.openiap.BuildConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * OpenIapStore (Android)
- * Convenience store that wraps OpenIapModule and provides spec-aligned, suspend APIs
- * with observable StateFlows for UI layers (Compose/XML) to consume.
+ * Convenience store that wraps an [OpenIapProtocol] implementation (Play Store or Horizon)
+ * and exposes suspend APIs with observable StateFlows for UI layers to consume.
  */
-class OpenIapStore(private val module: OpenIapModule) {
-    constructor(context: Context) : this(OpenIapModule(context))
+class OpenIapStore(private val module: OpenIapProtocol) {
+    constructor(context: Context) : this(buildModule(context, null, null))
+    constructor(context: Context, store: String?) : this(buildModule(context, store, null))
+    constructor(context: Context, store: String?, appId: String?) : this(buildModule(context, store, appId))
 
     // Public state
     private val _isConnected = MutableStateFlow(false)
@@ -111,7 +115,7 @@ class OpenIapStore(private val module: OpenIapModule) {
 
     // Expose a way to set the current Activity for purchase flows
     fun setActivity(activity: Activity?) {
-        (module as? OpenIapModule)?.setActivity(activity)
+        module.setActivity(activity)
     }
 
     init {
@@ -452,4 +456,30 @@ sealed class IapOperationResult {
     object Success : IapOperationResult()
     data class Failure(val message: String) : IapOperationResult()
     object Cancelled : IapOperationResult()
+}
+
+private fun buildModule(context: Context, store: String?, appId: String?): OpenIapProtocol {
+    val selected = (store ?: BuildConfig.OPENIAP_STORE).lowercase()
+    val resolvedAppId = appId ?: BuildConfig.HORIZON_APP_ID
+    return when (selected) {
+        "horizon", "meta", "quest" -> OpenIapHorizonModule(context, resolvedAppId)
+        "auto" -> if (isHorizonEnvironment(context)) {
+            OpenIapHorizonModule(context, resolvedAppId)
+        } else {
+            OpenIapModule(context)
+        }
+        "play", "google", "gplay", "googleplay", "gms" -> OpenIapModule(context)
+        else -> OpenIapModule(context)
+    }
+}
+
+private fun isHorizonEnvironment(context: Context): Boolean {
+    val manufacturer = android.os.Build.MANUFACTURER.lowercase()
+    if (manufacturer.contains("meta") || manufacturer.contains("oculus")) return true
+    return try {
+        context.packageManager.getPackageInfo("com.oculus.vrshell", 0)
+        true
+    } catch (_: Throwable) {
+        false
+    }
 }

@@ -20,6 +20,8 @@ android {
         
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+        buildConfigField("String", "OPENIAP_STORE", "\"play\"")
+        buildConfigField("String", "HORIZON_APP_ID", "\"\"")
     }
 
     buildTypes {
@@ -44,6 +46,7 @@ android {
     // Enable Compose for composables in this library (IapContext)
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -53,6 +56,10 @@ dependencies {
     
     // Google Play Billing Library (align with app/lib v8)
     api("com.android.billingclient:billing-ktx:8.0.0")
+
+    // Meta Horizon Billing Compatibility SDK (optional provider)
+    implementation("com.meta.horizon.billingclient.api:horizon-billing-compatibility:1.1.1")
+    implementation("com.meta.horizon.platform.ovr:android-platform-sdk:72")
     
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
