@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import android.app.Activity
-import android.content.Context
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -34,6 +33,7 @@ import dev.hyo.openiap.store.PurchaseResultStatus
 import dev.hyo.openiap.OpenIapError
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import dev.hyo.martie.util.findActivity
 
 // Helper to format remaining time like "3d 4h" / "2h 12m" / "35m"
 private fun formatRemaining(deltaMillis: Long): String {
@@ -56,9 +56,9 @@ fun SubscriptionFlowScreen(
     storeParam: OpenIapStore? = null
 ) {
     val context = LocalContext.current
-    val activity = context as? Activity
+    val activity = remember(context) { context.findActivity() }
     val uiScope = rememberCoroutineScope()
-    val appContext = context.applicationContext as Context
+    val appContext = remember(context) { context.applicationContext }
     val iapStore = storeParam ?: remember(appContext) { OpenIapStore(appContext) }
     val products by iapStore.products.collectAsState()
     val purchases by iapStore.availablePurchases.collectAsState()
@@ -67,6 +67,12 @@ fun SubscriptionFlowScreen(
     val status by iapStore.status.collectAsState()
     val connectionStatus by iapStore.connectionStatus.collectAsState()
     val lastPurchase by iapStore.currentPurchase.collectAsState(initial = null)
+    val lastPurchaseAndroid: PurchaseAndroid? = remember(lastPurchase) {
+        when (val purchase = lastPurchase) {
+            is PurchaseAndroid -> purchase
+            else -> null
+        }
+    }
 
     // Real-time subscription status (expiry/renewal). This requires server validation.
     data class SubscriptionUiInfo(
@@ -99,14 +105,16 @@ fun SubscriptionFlowScreen(
     }
 
     // Refresh server-side status when purchases change
-    LaunchedEffect(purchases) {
+    LaunchedEffect(androidPurchases) {
         val map = mutableMapOf<String, SubscriptionUiInfo>()
-        purchases
+        androidPurchases
             .filter { it.productId in IapConstants.SUBS_SKUS }
-            .forEach { p ->
-                val token = p.purchaseToken ?: return@forEach
-                val info = fetchSubStatusFromServer(p.productId, token)
-                if (info != null) map[p.productId] = info.copy(autoRenewing = p.isAutoRenewing)
+            .forEach { purchase ->
+                val token = purchase.purchaseToken ?: return@forEach
+                val info = fetchSubStatusFromServer(purchase.productId, token)
+                if (info != null) {
+                    map[purchase.productId] = info.copy(autoRenewing = purchase.isAutoRenewing)
+                }
             }
         subStatus = map
     }
@@ -253,7 +261,7 @@ fun SubscriptionFlowScreen(
             
             // Active Subscriptions Section
             // Treat any purchase with matching subscription SKU as subscribed
-    val activeSubscriptions = androidPurchases.filter { it.productId in IapConstants.SUBS_SKUS }
+            val activeSubscriptions = androidPurchases.filter { it.productId in IapConstants.SUBS_SKUS }
             if (activeSubscriptions.isNotEmpty()) {
                 item {
                     SectionHeaderView(title = "Active Subscriptions")
@@ -383,8 +391,8 @@ fun SubscriptionFlowScreen(
         return true
     }
 
-    LaunchedEffect(lastPurchase?.id) {
-        val purchase = lastPurchase as? PurchaseAndroid ?: return@LaunchedEffect
+    LaunchedEffect(lastPurchaseAndroid?.id) {
+        val purchase = lastPurchaseAndroid ?: return@LaunchedEffect
         try {
             // 1) Server-side validation (replace with your backend call)
             val valid = validateReceiptOnServer(purchase)

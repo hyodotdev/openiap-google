@@ -78,6 +78,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
     private var currentActivityRef: WeakReference<Activity>? = null
     private val productManager = ProductManager()
     private val gson = Gson()
+    private val fallbackActivity: Activity? = if (context is Activity) context else null
 
     private val purchaseUpdateListeners = mutableSetOf<OpenIapPurchaseUpdateListener>()
     private val purchaseErrorListeners = mutableSetOf<OpenIapPurchaseErrorListener>()
@@ -146,15 +147,15 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
 
     val getActiveSubscriptions: QueryGetActiveSubscriptionsHandler = { subscriptionIds ->
         withContext(Dispatchers.IO) {
-            val purchases = queryPurchases(billingClient, BillingClient.ProductType.SUBS)
-            val filtered = if (subscriptionIds.isNullOrEmpty()) {
-                purchases
+            val androidPurchases = queryPurchases(billingClient, BillingClient.ProductType.SUBS)
+                .filterIsInstance<PurchaseAndroid>()
+            val ids = subscriptionIds.orEmpty()
+            val filtered = if (ids.isEmpty()) {
+                androidPurchases
             } else {
-                purchases.filter { purchase ->
-                    (purchase as? PurchaseAndroid)?.productId?.let(subscriptionIds::contains) == true
-                }
+                androidPurchases.filter { it.productId in ids }
             }
-            filtered.mapNotNull { (it as? PurchaseAndroid)?.toActiveSubscription() }
+            filtered.map { it.toActiveSubscription() }
         }
     }
 
@@ -165,7 +166,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
     val requestPurchase: MutationRequestPurchaseHandler = { props ->
         val purchases = withContext(Dispatchers.IO) {
             val androidArgs = props.toAndroidPurchaseArgs()
-            val activity = currentActivityRef?.get() ?: (context as? Activity)
+            val activity = currentActivityRef?.get() ?: fallbackActivity
 
             if (activity == null) {
                 val err = OpenIapError.MissingCurrentActivity

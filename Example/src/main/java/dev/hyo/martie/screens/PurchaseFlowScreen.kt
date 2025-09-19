@@ -1,7 +1,6 @@
 package dev.hyo.martie.screens
 
 import android.app.Activity
-import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,12 +29,12 @@ import dev.hyo.openiap.store.PurchaseResultStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import dev.hyo.openiap.Product
 import dev.hyo.openiap.ProductAndroid
 import dev.hyo.openiap.ProductQueryType
 import dev.hyo.openiap.ProductType
 import dev.hyo.openiap.Purchase
 import dev.hyo.openiap.PurchaseAndroid
+import dev.hyo.martie.util.findActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,9 +43,9 @@ fun PurchaseFlowScreen(
     storeParam: OpenIapStore? = null
 ) {
     val context = LocalContext.current
-    val activity = context as? Activity
+    val activity = remember(context) { context.findActivity() }
     val uiScope = rememberCoroutineScope()
-    val appContext = context.applicationContext as Context
+    val appContext = remember(context) { context.applicationContext }
     val iapStore = storeParam ?: remember(appContext) { OpenIapStore(appContext) }
     val products by iapStore.products.collectAsState()
     val purchases by iapStore.availablePurchases.collectAsState()
@@ -54,6 +53,12 @@ fun PurchaseFlowScreen(
     val androidPurchases = remember(purchases) { purchases.filterIsInstance<PurchaseAndroid>() }
     val status by iapStore.status.collectAsState()
     val lastPurchase by iapStore.currentPurchase.collectAsState(initial = null)
+    val lastPurchaseAndroid: PurchaseAndroid? = remember(lastPurchase) {
+        when (val purchase = lastPurchase) {
+            is PurchaseAndroid -> purchase
+            else -> null
+        }
+    }
     val connectionStatus by iapStore.connectionStatus.collectAsState()
     val clipboard = LocalClipboardManager.current
     val statusMessage = status.lastPurchaseResult
@@ -202,17 +207,17 @@ fun PurchaseFlowScreen(
                             ) {
                                 OutlinedButton(
                                     onClick = {
-                                        (lastPurchase as? PurchaseAndroid)?.let { p ->
+                                        lastPurchaseAndroid?.let { p ->
                                             val json = p.toJson().toString()
                                             clipboard.setText(AnnotatedString(json))
                                         }
                                     },
-                                    enabled = lastPurchase is PurchaseAndroid
+                                    enabled = lastPurchaseAndroid != null
                                 ) { Text("Copy Result") }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 OutlinedButton(
-                                    onClick = { selectedPurchase = lastPurchase as? PurchaseAndroid },
-                                    enabled = lastPurchase is PurchaseAndroid
+                                    onClick = { lastPurchaseAndroid?.let { selectedPurchase = it } },
+                                    enabled = lastPurchaseAndroid != null
                                 ) { Text("Details") }
                             }
                         }
@@ -344,8 +349,8 @@ fun PurchaseFlowScreen(
 
     // Auto-handle purchase: validate on server then finish
     // IMPORTANT: Implement real server-side receipt validation in validateReceiptOnServer()
-    LaunchedEffect(lastPurchase?.id) {
-        val purchase = lastPurchase as? PurchaseAndroid ?: return@LaunchedEffect
+    LaunchedEffect(lastPurchaseAndroid?.id) {
+        val purchase = lastPurchaseAndroid ?: return@LaunchedEffect
         try {
             // 1) Server-side validation (replace with your backend call)
             val valid = validateReceiptOnServer(purchase)

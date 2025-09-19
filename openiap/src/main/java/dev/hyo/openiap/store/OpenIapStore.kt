@@ -111,7 +111,7 @@ class OpenIapStore(private val module: OpenIapModule) {
 
     // Expose a way to set the current Activity for purchase flows
     fun setActivity(activity: Activity?) {
-        (module as? OpenIapModule)?.setActivity(activity)
+        module.setActivity(activity)
     }
 
     init {
@@ -175,9 +175,9 @@ class OpenIapStore(private val module: OpenIapModule) {
                 is FetchProductsResultSubscriptions -> {
                     val subs = result.value.orEmpty()
                     _subscriptions.value = subs
-                    _products.value = subs.mapNotNull { subscription ->
-                        (subscription as? ProductSubscriptionAndroid)?.toProduct()
-                    }
+                    _products.value = subs
+                        .filterIsInstance<ProductSubscriptionAndroid>()
+                        .map { it.toProduct() }
                 }
             }
             result
