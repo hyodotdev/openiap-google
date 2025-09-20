@@ -22,16 +22,31 @@ cd openiap-google
 # Open in Android Studio (recommended)
 ./scripts/open-android-studio.sh
 
-# Or build from CLI
-./gradlew :openiap:assemble
+# Or build from CLI (Play flavor)
+./gradlew :openiap:assemblePlayDebug
 
 # Run unit tests for the library module
 ./gradlew :openiap:test
 
-# (Optional) Install and run the Example app
-./gradlew :Example:installDebug
+# (Optional) Install and run the Example app (Play flavor)
+./gradlew :Example:installPlayDebug
 adb shell am start -n dev.hyo.martie/.MainActivity
 ```
+
+### Horizon flavor testing
+
+The Horizon build uses a dedicated product flavor that bundles Meta's billing compatibility SDK.
+
+```bash
+# Assemble the Horizon flavor of the library
+./gradlew :openiap:assembleHorizonDebug
+
+# Install the sample app (replace APP_ID with your Meta Horizon identifier)
+./gradlew -PEXAMPLE_OPENIAP_STORE=horizon "-PEXAMPLE_HORIZON_APP_ID=APP_ID" :Example:installHorizonDebug
+adb shell am start -n dev.hyo.martie/.MainActivity
+```
+
+With flavors enabled, Gradle no longer creates the generic `installDebug`/`assembleDebug` tasks—run the flavor-specific tasks explicitly in scripts, CI pipelines, and IDE run configurations.
 
 ## Generated Types
 
