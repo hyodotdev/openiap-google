@@ -68,7 +68,7 @@ import java.lang.ref.WeakReference
 /**
  * Main OpenIapModule implementation for Android
  */
-class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
+class OpenIapModule(private val context: Context) : OpenIapProtocol, PurchasesUpdatedListener {
 
     companion object {
         private const val TAG = "OpenIapModule"
@@ -84,7 +84,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
     private val purchaseErrorListeners = mutableSetOf<OpenIapPurchaseErrorListener>()
     private var currentPurchaseCallback: ((Result<List<Purchase>>) -> Unit)? = null
 
-    val initConnection: MutationInitConnectionHandler = {
+    override val initConnection: MutationInitConnectionHandler = {
         withContext(Dispatchers.IO) {
             suspendCancellableCoroutine<Boolean> { continuation ->
                 initBillingClient(
@@ -98,7 +98,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         }
     }
 
-    val endConnection: MutationEndConnectionHandler = {
+    override val endConnection: MutationEndConnectionHandler = {
         withContext(Dispatchers.IO) {
             runCatching {
                 billingClient?.endConnection()
@@ -108,7 +108,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         }
     }
 
-    val fetchProducts: QueryFetchProductsHandler = { params ->
+    override val fetchProducts: QueryFetchProductsHandler = { params ->
         withContext(Dispatchers.IO) {
             val client = billingClient ?: throw OpenIapError.NotPrepared
             if (!client.isReady) throw OpenIapError.NotPrepared
@@ -141,11 +141,11 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
             }
         }
     }
-    val getAvailablePurchases: QueryGetAvailablePurchasesHandler = { _ ->
+    override val getAvailablePurchases: QueryGetAvailablePurchasesHandler = { _ ->
         withContext(Dispatchers.IO) { restorePurchasesHelper(billingClient) }
     }
 
-    val getActiveSubscriptions: QueryGetActiveSubscriptionsHandler = { subscriptionIds ->
+    override val getActiveSubscriptions: QueryGetActiveSubscriptionsHandler = { subscriptionIds ->
         withContext(Dispatchers.IO) {
             val androidPurchases = queryPurchases(billingClient, BillingClient.ProductType.SUBS)
                 .filterIsInstance<PurchaseAndroid>()
@@ -159,11 +159,11 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         }
     }
 
-    val hasActiveSubscriptions: QueryHasActiveSubscriptionsHandler = { subscriptionIds ->
+    override val hasActiveSubscriptions: QueryHasActiveSubscriptionsHandler = { subscriptionIds ->
         getActiveSubscriptions(subscriptionIds).isNotEmpty()
     }
 
-    val requestPurchase: MutationRequestPurchaseHandler = { props ->
+    override val requestPurchase: MutationRequestPurchaseHandler = { props ->
         val purchases = withContext(Dispatchers.IO) {
             val androidArgs = props.toAndroidPurchaseArgs()
             val activity = currentActivityRef?.get() ?: fallbackActivity
@@ -314,7 +314,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         queryPurchases(billingClient, billingType)
     }
 
-    val finishTransaction: MutationFinishTransactionHandler = { purchase, isConsumable ->
+    override val finishTransaction: MutationFinishTransactionHandler = { purchase, isConsumable ->
         withContext(Dispatchers.IO) {
             val client = billingClient ?: throw OpenIapError.NotPrepared
             if (!client.isReady) throw OpenIapError.NotPrepared
@@ -345,7 +345,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         }
     }
 
-    val acknowledgePurchaseAndroid: MutationAcknowledgePurchaseAndroidHandler = { purchaseToken ->
+    override val acknowledgePurchaseAndroid: MutationAcknowledgePurchaseAndroidHandler = { purchaseToken ->
         withContext(Dispatchers.IO) {
             val client = billingClient ?: throw OpenIapError.NotPrepared
             val params = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchaseToken).build()
@@ -362,7 +362,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         }
     }
 
-    val consumePurchaseAndroid: MutationConsumePurchaseAndroidHandler = { purchaseToken ->
+    override val consumePurchaseAndroid: MutationConsumePurchaseAndroidHandler = { purchaseToken ->
         withContext(Dispatchers.IO) {
             val client = billingClient ?: throw OpenIapError.NotPrepared
             val params = ConsumeParams.newBuilder().setPurchaseToken(purchaseToken).build()
@@ -379,7 +379,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         }
     }
 
-    val deepLinkToSubscriptions: MutationDeepLinkToSubscriptionsHandler = { options ->
+    override val deepLinkToSubscriptions: MutationDeepLinkToSubscriptionsHandler = { options ->
         val pkg = options?.packageNameAndroid ?: context.packageName
         val uri = if (!options?.skuAndroid.isNullOrBlank()) {
             Uri.parse("https://play.google.com/store/account/subscriptions?sku=${options!!.skuAndroid}&package=$pkg")
@@ -390,14 +390,14 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         context.startActivity(intent)
     }
 
-    val restorePurchases: MutationRestorePurchasesHandler = {
+    override val restorePurchases: MutationRestorePurchasesHandler = {
         withContext(Dispatchers.IO) {
             restorePurchasesHelper(billingClient)
             Unit
         }
     }
 
-    val validateReceipt: MutationValidateReceiptHandler = { throw OpenIapError.NotSupported }
+    override val validateReceipt: MutationValidateReceiptHandler = { throw OpenIapError.NotSupported }
 
     private val purchaseError: SubscriptionPurchaseErrorHandler = {
         onPurchaseError(this::addPurchaseErrorListener, this::removePurchaseErrorListener)
@@ -407,7 +407,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         onPurchaseUpdated(this::addPurchaseUpdateListener, this::removePurchaseUpdateListener)
     }
 
-    val queryHandlers: QueryHandlers = QueryHandlers(
+    override val queryHandlers: QueryHandlers = QueryHandlers(
         fetchProducts = fetchProducts,
         getActiveSubscriptions = getActiveSubscriptions,
         getAvailablePurchases = getAvailablePurchases,
@@ -415,7 +415,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         hasActiveSubscriptions = hasActiveSubscriptions
     )
 
-    val mutationHandlers: MutationHandlers = MutationHandlers(
+    override val mutationHandlers: MutationHandlers = MutationHandlers(
         acknowledgePurchaseAndroid = acknowledgePurchaseAndroid,
         consumePurchaseAndroid = consumePurchaseAndroid,
         deepLinkToSubscriptions = deepLinkToSubscriptions,
@@ -427,7 +427,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         validateReceipt = validateReceipt
     )
 
-    val subscriptionHandlers: SubscriptionHandlers = SubscriptionHandlers(
+    override val subscriptionHandlers: SubscriptionHandlers = SubscriptionHandlers(
         purchaseError = purchaseError,
         purchaseUpdated = purchaseUpdated
     )
@@ -456,19 +456,19 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         }
     }
 
-    fun addPurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener) {
+    override fun addPurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener) {
         purchaseUpdateListeners.add(listener)
     }
 
-    fun removePurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener) {
+    override fun removePurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener) {
         purchaseUpdateListeners.remove(listener)
     }
 
-    fun addPurchaseErrorListener(listener: OpenIapPurchaseErrorListener) {
+    override fun addPurchaseErrorListener(listener: OpenIapPurchaseErrorListener) {
         purchaseErrorListeners.add(listener)
     }
 
-    fun removePurchaseErrorListener(listener: OpenIapPurchaseErrorListener) {
+    override fun removePurchaseErrorListener(listener: OpenIapPurchaseErrorListener) {
         purchaseErrorListeners.remove(listener)
     }
 
@@ -558,7 +558,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         })
     }
 
-    fun setActivity(activity: Activity?) {
+    override fun setActivity(activity: Activity?) {
         currentActivityRef = activity?.let { WeakReference(it) }
     }
 }
