@@ -35,7 +35,6 @@
         "**/node_modules/": true
     },
     "gradle.nestedProjects": true,
-    "gradle.javaDebug": true,
     "typescript.validate.enable": false,
     "javascript.validate.enable": false,
     "typescript.tsc.autoDetect": "off",
@@ -44,6 +43,7 @@
         "billingclient",
         "gson",
         "hyodotdev",
+        "martie",
         "openiap",
         "skus"
     ]

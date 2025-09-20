@@ -2,13 +2,24 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "🚀 Android: Run Example (install & start)",
+            "name": "🚀 Android: Run Example (Play)",
             "type": "node",
             "request": "launch",
             "runtimeExecutable": "bash",
             "runtimeArgs": [
                 "-lc",
-                "./gradlew :Example:installDebug && adb shell am start -n dev.hyo.martie/.MainActivity"
+                "./gradlew :Example:installPlayDebug && adb shell am start -n dev.hyo.martie/.MainActivity"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "🚀 Android: Run Example (Horizon)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "bash",
+            "runtimeArgs": [
+                "-lc",
+                "./gradlew -PEXAMPLE_OPENIAP_STORE=horizon \"-PEXAMPLE_HORIZON_APP_ID=${input:horizonAppId}\" :Example:installHorizonDebug && adb shell am start -n dev.hyo.martie/.MainActivity"
             ],
             "console": "integratedTerminal"
         },
@@ -24,13 +35,24 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "🧱 Android: Assemble Example (debug)",
+            "name": "🧱 Android: Assemble Example (Play Debug)",
             "type": "node",
             "request": "launch",
             "runtimeExecutable": "bash",
             "runtimeArgs": [
                 "-lc",
-                "./gradlew :Example:assembleDebug"
+                "./gradlew :Example:assemblePlayDebug"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "🧱 Android: Assemble Example (Horizon Debug)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "bash",
+            "runtimeArgs": [
+                "-lc",
+                "./gradlew -PEXAMPLE_OPENIAP_STORE=horizon \"-PEXAMPLE_HORIZON_APP_ID=${input:horizonAppId}\" :Example:assembleHorizonDebug"
             ],
             "console": "integratedTerminal"
         },
@@ -66,6 +88,14 @@
                 "./gradlew :openiap:testDebugUnitTest --no-daemon"
             ],
             "console": "integratedTerminal"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "horizonAppId",
+            "type": "promptString",
+            "description": "Enter Horizon App ID (Meta) used when building the example",
+            "default": ""
         }
     ]
 }

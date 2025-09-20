@@ -29,6 +29,7 @@ OpenIAP GMS is a modern, type-safe Kotlin library that simplifies Google Play in
 - 🔐 **Google Play Billing v8** - Latest billing library with enhanced security
 - ⚡ **Kotlin Coroutines** - Modern async/await API
 - 🎯 **Type Safe** - Full Kotlin type safety with sealed classes
+- 🥽 **Meta Horizon OS Support** - Optional compatibility SDK integration alongside Play Billing
 - 🔄 **Real-time Events** - Purchase update and error listeners
 - 🧵 **Thread Safe** - Concurrent operations with proper synchronization
 - 📱 **Easy Integration** - Simple singleton pattern with context management
@@ -51,6 +52,21 @@ dependencies {
     implementation("io.github.hyochan.openiap:openiap-google:1.2.11")
 }
 ```
+
+### Optional provider configuration
+
+Set the target billing provider via `BuildConfig` fields (default is `play`). The library will also auto-detect Horizon hardware when `auto` is supplied.
+
+```kotlin
+android {
+    defaultConfig {
+        buildConfigField("String", "OPENIAP_STORE", "\"auto\"") // play | horizon | auto
+        buildConfigField("String", "HORIZON_APP_ID", "\"YOUR_APP_ID\"")
+    }
+}
+```
+
+The example app reads the same values via `EXAMPLE_OPENIAP_STORE` / `EXAMPLE_HORIZON_APP_ID` Gradle properties for quick testing.
 
 Or `build.gradle`:
 
@@ -155,6 +171,21 @@ class MainActivity : AppCompatActivity() {
     }
 }
 ```
+
+## 🥽 Testing on Meta Horizon
+
+The library exposes a dedicated `horizon` product flavor that bundles Meta's billing compatibility SDK. Build and install it with:
+
+```bash
+# Compile the Horizon flavor of the library
+./gradlew :openiap:assembleHorizonDebug
+
+# Install the sample app (replace APP_ID with your Horizon app id)
+./gradlew -PEXAMPLE_OPENIAP_STORE=horizon "-PEXAMPLE_HORIZON_APP_ID=APP_ID" :Example:installHorizonDebug
+adb shell am start -n dev.hyo.martie/.MainActivity
+```
+
+For standard Google Play workflows, run the matching `play` tasks (`:openiap:assemblePlayDebug`, `:Example:installPlayDebug`). Flavors remove the generic `installDebug` task, so always target the desired flavor explicitly when using the CLI, CI, or IDE run configurations.
 
 ## 📚 API Reference
 

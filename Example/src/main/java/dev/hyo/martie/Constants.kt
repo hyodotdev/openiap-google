@@ -1,8 +1,10 @@
 package dev.hyo.martie
 
 object IapConstants {
-    // App-defined SKU lists
-    val INAPP_SKUS = listOf(
+    private fun isHorizon(): Boolean =
+        dev.hyo.martie.BuildConfig.OPENIAP_STORE.equals("horizon", ignoreCase = true)
+
+    private val HORIZON_INAPP = listOf(
         "dev.hyo.martie.10bulbs",
         "dev.hyo.martie.30bulbs",
         "dev.hyo.martie.certified"  // Non-consumable
@@ -18,3 +20,9 @@ object IapConstants {
     const val PREMIUM_YEARLY_BASE_PLAN = "premium-year"   // Yearly base plan
 }
 
+    val INAPP_SKUS: List<String>
+        get() = if (isHorizon()) HORIZON_INAPP else PLAY_INAPP
+
+    val SUBS_SKUS: List<String>
+        get() = if (isHorizon()) HORIZON_SUBS else PLAY_SUBS
+}

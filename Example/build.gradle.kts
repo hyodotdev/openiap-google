@@ -17,6 +17,28 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+        val appId = (project.findProperty("EXAMPLE_HORIZON_APP_ID") as String?)
+            ?: (project.findProperty("EXAMPLE_OPENIAP_APP_ID") as String?)
+            ?: ""
+        buildConfigField("String", "HORIZON_APP_ID", "\"${appId}\"")
+    }
+
+    flavorDimensions += "store"
+
+    productFlavors {
+        val storeOverride = (project.findProperty("EXAMPLE_OPENIAP_STORE") as String?)
+
+        create("play") {
+            dimension = "store"
+            val value = storeOverride ?: "play"
+            buildConfigField("String", "OPENIAP_STORE", "\"${value}\"")
+        }
+
+        create("horizon") {
+            dimension = "store"
+            val value = storeOverride ?: "horizon"
+            buildConfigField("String", "OPENIAP_STORE", "\"${value}\"")
+        }
     }
 
     buildTypes {
@@ -44,6 +66,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {
