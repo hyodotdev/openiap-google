@@ -63,7 +63,7 @@
             "runtimeExecutable": "bash",
             "runtimeArgs": [
                 "-lc",
-                "./gradlew :openiap:test --no-daemon"
+                "./gradlew :openiap:testDebugUnitTest --no-daemon"
             ],
             "console": "integratedTerminal"
         }

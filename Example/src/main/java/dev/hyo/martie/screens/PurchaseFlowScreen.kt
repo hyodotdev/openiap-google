@@ -196,7 +196,8 @@ fun PurchaseFlowScreen(
                         PurchaseResultCard(
                             message = result.message,
                             status = result.status,
-                            onDismiss = { iapStore.clearStatusMessage() }
+                            onDismiss = { iapStore.clearStatusMessage() },
+                            code = result.code
                         )
                         if (result.status == PurchaseResultStatus.Success) {
                             Row(

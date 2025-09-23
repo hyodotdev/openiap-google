@@ -18,7 +18,8 @@ import dev.hyo.openiap.store.PurchaseResultStatus
 fun PurchaseResultCard(
     message: String,
     status: PurchaseResultStatus,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    code: String? = null
 ) {
     val (background, contentColor, icon) = when (status) {
         PurchaseResultStatus.Success -> Triple(AppColors.success.copy(alpha = 0.1f), AppColors.success, Icons.Default.CheckCircle)
@@ -45,11 +46,20 @@ fun PurchaseResultCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(24.dp))
-                Text(
-                    message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = contentColor
-                )
+                Column {
+                    if (code != null && (status == PurchaseResultStatus.Error || status == PurchaseResultStatus.Info)) {
+                        Text(
+                            "Code: $code",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = contentColor.copy(alpha = 0.8f)
+                        )
+                    }
+                    Text(
+                        message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = contentColor
+                    )
+                }
             }
             IconButton(onClick = onDismiss) {
                 Icon(

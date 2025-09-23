@@ -82,11 +82,13 @@ class OpenIapStore(private val module: OpenIapModule) {
     }
     private val purchaseErrorListener = OpenIapPurchaseErrorListener { error ->
         if (error is OpenIapError.UserCancelled || error is OpenIapError.PurchaseCancelled) {
-            val message = OpenIapError.defaultMessage(OpenIapError.UserCancelled.CODE)
+            val code = OpenIapError.toCode(error)
+            val message = OpenIapError.defaultMessage(code)
             setStatusMessage(
                 message = message,
                 status = PurchaseResultStatus.Info,
-                productId = pendingRequestProductId
+                productId = pendingRequestProductId,
+                code = code
             )
             _status.value = _status.value.copy(lastError = null)
             pendingRequestProductId = null

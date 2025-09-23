@@ -51,7 +51,7 @@ internal class ProductManager {
         return suspendCancellableCoroutine { cont ->
             client.queryProductDetailsAsync(params) { billingResult, result ->
                 if (billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
-                    cont.resumeWithException(OpenIapError.QueryProduct())
+                    cont.resumeWithException(OpenIapError.QueryProduct)
                     return@queryProductDetailsAsync
                 }
                 val list = result.productDetailsList ?: emptyList()

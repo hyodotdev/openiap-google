@@ -247,7 +247,8 @@ fun SubscriptionFlowScreen(
                     PurchaseResultCard(
                         message = result.message,
                         status = result.status,
-                        onDismiss = { iapStore.clearStatusMessage() }
+                        onDismiss = { iapStore.clearStatusMessage() },
+                        code = result.code
                     )
                 }
             }

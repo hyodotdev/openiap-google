@@ -255,7 +255,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
 
                     val result = client.launchBillingFlow(activity, flowBuilder.build())
                     if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                        val err = OpenIapError.PurchaseFailed()
+                        val err = OpenIapError.PurchaseFailed
                         purchaseErrorListeners.forEach { listener -> runCatching { listener.onPurchaseError(err) } }
                         currentPurchaseCallback?.invoke(Result.success(emptyList()))
                     }
@@ -298,7 +298,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
                             }
                             buildAndLaunch(ordered)
                         } else {
-                            val err = OpenIapError.QueryProduct()
+                            val err = OpenIapError.QueryProduct
                             purchaseErrorListeners.forEach { listener -> runCatching { listener.onPurchaseError(err) } }
                             currentPurchaseCallback?.invoke(Result.success(emptyList()))
                         }
@@ -320,7 +320,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
             if (!client.isReady) throw OpenIapError.NotPrepared
             val token = purchase.purchaseToken.orEmpty()
             if (token.isBlank()) {
-                throw OpenIapError.PurchaseFailed()
+                throw OpenIapError.PurchaseFailed
             }
 
             val result = if (isConsumable == true) {
@@ -340,7 +340,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
             }
 
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                throw OpenIapError.PurchaseFailed()
+                throw OpenIapError.PurchaseFailed
             }
         }
     }
