@@ -6,7 +6,6 @@ plugins {
     id("com.vanniktech.maven.publish") version "0.29.0" apply false
 }
 
-// openiap-versions.json에서 버전 읽기 (간단한 파싱)
 import java.io.File
 
 val versionsFile = File(rootDir, "openiap-versions.json")
@@ -14,7 +13,6 @@ val jsonText = versionsFile.readText()
 val googleVersion = jsonText.substringAfter("\"google\": \"").substringBefore("\"")
 val gqlVersion = jsonText.substringAfter("\"gql\": \"").substringBefore("\"")
 
-// 버전을 프로젝트 속성으로 설정
 extra["OPENIAP_VERSION"] = googleVersion
 extra["GQL_VERSION"] = gqlVersion
 
