@@ -128,34 +128,40 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
                     FetchProductsResultSubscriptions(subscriptionProducts)
                 }
                 ProductQueryType.All -> {
-                    // Query both types but filter results to avoid duplicates
-                    // Some products might be returned in both queries, so we need to deduplicate
-                    val productMap = mutableMapOf<String, Product>()
+                    // Query both types and combine results
+                    val allProducts = mutableListOf<Product>()
+                    val processedIds = mutableSetOf<String>()
 
-                    // First, try to get as INAPP products
+                    // First, get all INAPP products
                     val inAppDetails = runCatching {
                         queryProductDetails(client, productManager, params.skus, BillingClient.ProductType.INAPP)
                     }.getOrDefault(emptyList())
 
                     inAppDetails.forEach { detail ->
-                        productMap[detail.productId] = detail.toInAppProduct()
+                        val product = detail.toInAppProduct()
+                        allProducts.add(product)
+                        processedIds.add(detail.productId)
                     }
 
-                    // Then, get as subscription products (these override INAPP if both exist)
+                    // Then, get subscription products (only add if not already processed as INAPP)
                     val subsDetails = runCatching {
                         queryProductDetails(client, productManager, params.skus, BillingClient.ProductType.SUBS)
                     }.getOrDefault(emptyList())
 
                     subsDetails.forEach { detail ->
-                        // Convert subscription to Product type and override any existing INAPP with same ID
-                        productMap[detail.productId] = detail.toSubscriptionProduct().toProduct()
+                        if (detail.productId !in processedIds) {
+                            // Keep subscription as ProductSubscription, but convert to Product for return
+                            val subProduct = detail.toSubscriptionProduct()
+                            allProducts.add(subProduct.toProduct())
+                        }
                     }
 
-                    // Return products in the order they were requested
+                    // Return products in the order they were requested if SKUs provided
                     val orderedProducts = if (params.skus.isNotEmpty()) {
+                        val productMap = allProducts.associateBy { it.id }
                         params.skus.mapNotNull { productMap[it] }
                     } else {
-                        productMap.values.toList()
+                        allProducts
                     }
 
                     FetchProductsResultProducts(orderedProducts)
