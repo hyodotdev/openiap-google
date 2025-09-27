@@ -1,5 +1,12 @@
 # Project Conventions
 
+## Naming Conventions
+
+### Enum Values
+- Enum values in this codebase must use **kebab-case** (e.g., `non-consumable`, `in-app`, `user-cancelled`)
+- This matches the convention used in the auto-generated Types.kt from GraphQL schemas
+- Do not use snake_case (e.g., `non_consumable`) or camelCase for enum raw values
+
 ## Generated GraphQL/Kotlin Models
 
 - `openiap/src/main/Types.kt` is auto-generated. Regenerate it with `./scripts/generate-types.sh` after changing any GraphQL schema files.
