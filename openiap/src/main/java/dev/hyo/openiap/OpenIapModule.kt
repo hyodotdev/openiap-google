@@ -58,7 +58,6 @@ import dev.hyo.openiap.utils.BillingConverters.toPurchase
 import dev.hyo.openiap.utils.BillingConverters.toSubscriptionProduct
 import dev.hyo.openiap.utils.fromBillingState
 import dev.hyo.openiap.utils.toActiveSubscription
-import dev.hyo.openiap.utils.toProduct
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext

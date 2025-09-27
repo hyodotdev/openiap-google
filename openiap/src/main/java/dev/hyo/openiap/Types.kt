@@ -562,8 +562,6 @@ public data class FetchProductsResultProducts(val value: List<Product>?) : Fetch
 
 public data class FetchProductsResultSubscriptions(val value: List<ProductSubscription>?) : FetchProductsResult
 
-public data class FetchProductsResultAll(val products: List<Product>?, val subscriptions: List<ProductSubscription>?) : FetchProductsResult
-
 public data class PricingPhaseAndroid(
     val billingCycleCount: Int,
     val billingPeriod: String,
@@ -2066,6 +2064,10 @@ public interface QueryResolver {
      */
     suspend fun getReceiptDataIOS(): String?
     /**
+     * Get the current storefront country code
+     */
+    suspend fun getStorefront(): String
+    /**
      * Get the current App Store storefront country code
      */
     suspend fun getStorefrontIOS(): String
@@ -2165,6 +2167,7 @@ public typealias QueryGetAvailablePurchasesHandler = suspend (options: PurchaseO
 public typealias QueryGetPendingTransactionsIOSHandler = suspend () -> List<PurchaseIOS>
 public typealias QueryGetPromotedProductIOSHandler = suspend () -> ProductIOS?
 public typealias QueryGetReceiptDataIOSHandler = suspend () -> String?
+public typealias QueryGetStorefrontHandler = suspend () -> String
 public typealias QueryGetStorefrontIOSHandler = suspend () -> String
 public typealias QueryGetTransactionJwsIOSHandler = suspend (sku: String) -> String?
 public typealias QueryHasActiveSubscriptionsHandler = suspend (subscriptionIds: List<String>?) -> Boolean
@@ -2183,6 +2186,7 @@ public data class QueryHandlers(
     val getPendingTransactionsIOS: QueryGetPendingTransactionsIOSHandler? = null,
     val getPromotedProductIOS: QueryGetPromotedProductIOSHandler? = null,
     val getReceiptDataIOS: QueryGetReceiptDataIOSHandler? = null,
+    val getStorefront: QueryGetStorefrontHandler? = null,
     val getStorefrontIOS: QueryGetStorefrontIOSHandler? = null,
     val getTransactionJwsIOS: QueryGetTransactionJwsIOSHandler? = null,
     val hasActiveSubscriptions: QueryHasActiveSubscriptionsHandler? = null,

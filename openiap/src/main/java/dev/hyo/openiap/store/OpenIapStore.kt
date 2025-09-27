@@ -172,7 +172,7 @@ class OpenIapStore(private val module: OpenIapModule) {
             val result = module.fetchProducts(ProductRequest(skus = skus, type = type))
             when (result) {
                 is FetchProductsResultProducts -> {
-                    // Merge new in-app products with existing ones
+                    // Merge new products with existing ones
                     val newProducts = result.value.orEmpty()
                     val existingProductIds = _products.value.map { it.id }.toSet()
                     val productsToAdd = newProducts.filter { it.id !in existingProductIds }
@@ -194,7 +194,7 @@ class OpenIapStore(private val module: OpenIapModule) {
                     _products.value = _products.value + productsToAdd
                 }
                 is FetchProductsResultAll -> {
-                    // Replace all with the combined result
+                    // For All type, replace with combined results
                     _products.value = result.products.orEmpty()
                     _subscriptions.value = result.subscriptions.orEmpty()
                 }
