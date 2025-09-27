@@ -112,7 +112,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         withContext(Dispatchers.IO) {
             val client = billingClient ?: throw OpenIapError.NotPrepared
             if (!client.isReady) throw OpenIapError.NotPrepared
-            if (params.skus.isEmpty()) throw OpenIapError.EmptySkuList
+            if (params.skus.isEmpty() && params.type != ProductQueryType.All) throw OpenIapError.EmptySkuList
 
             val queryType = params.type ?: ProductQueryType.All
             val includeInApp = queryType == ProductQueryType.InApp || queryType == ProductQueryType.All
@@ -132,11 +132,9 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
                 ProductQueryType.InApp -> FetchProductsResultProducts(inAppProducts)
                 ProductQueryType.Subs -> FetchProductsResultSubscriptions(subscriptionProducts)
                 ProductQueryType.All -> {
-                    val combined = buildList<Product> {
-                        addAll(inAppProducts)
-                        addAll(subscriptionProducts.map { it.toProduct() })
-                    }
-                    FetchProductsResultProducts(combined)
+                    // For All type, combine products and return as Products result
+                    val allProducts = inAppProducts + subscriptionProducts.filterIsInstance<ProductSubscriptionAndroid>().map { it.toProduct() }
+                    FetchProductsResultProducts(allProducts)
                 }
             }
         }

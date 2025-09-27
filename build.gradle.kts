@@ -6,6 +6,16 @@ plugins {
     id("com.vanniktech.maven.publish") version "0.29.0" apply false
 }
 
+import java.io.File
+
+val versionsFile = File(rootDir, "openiap-versions.json")
+val jsonText = versionsFile.readText()
+val googleVersion = jsonText.substringAfter("\"google\": \"").substringBefore("\"")
+val gqlVersion = jsonText.substringAfter("\"gql\": \"").substringBefore("\"")
+
+extra["OPENIAP_VERSION"] = googleVersion
+extra["GQL_VERSION"] = gqlVersion
+
 // Configure Sonatype (OSSRH) publishing at the root
 // Credentials are sourced from env or gradle.properties (OSSRH_USERNAME/OSSRH_PASSWORD)
 // Maven Central publishing is configured per-module via Vanniktech plugin.

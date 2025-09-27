@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="1.0.8"
+VERSION=""
 SKIP_DOWNLOAD=false
 
 while [[ $# -gt 0 ]]; do
@@ -47,7 +47,14 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 TARGET_DIR="${REPO_ROOT}/openiap/src/main/java/dev/hyo/openiap"
 TARGET_FILE="${TARGET_DIR}/Types.kt"
 VERSION_FILE="${REPO_ROOT}/VERSION"
+VERSIONS_JSON="${REPO_ROOT}/openiap-versions.json"
 
+# Try to get version from openiap-versions.json first
+if [[ -z "$VERSION" ]] && [[ -f "$VERSIONS_JSON" ]]; then
+  VERSION="$(python3 -c "import json; print(json.load(open('$VERSIONS_JSON'))['gql'])" 2>/dev/null || true)"
+fi
+
+# Fall back to VERSION file if not found
 if [[ -z "$VERSION" ]] && [[ -f "$VERSION_FILE" ]]; then
   VERSION="$(head -n1 "$VERSION_FILE" | tr -d ' \r')"
 fi
