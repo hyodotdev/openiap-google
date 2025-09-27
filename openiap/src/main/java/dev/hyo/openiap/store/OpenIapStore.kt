@@ -3,7 +3,6 @@ package dev.hyo.openiap.store
 import dev.hyo.openiap.ActiveSubscription
 import dev.hyo.openiap.DeepLinkOptions
 import dev.hyo.openiap.FetchProductsResult
-import dev.hyo.openiap.FetchProductsResultAll
 import dev.hyo.openiap.FetchProductsResultProducts
 import dev.hyo.openiap.FetchProductsResultSubscriptions
 import dev.hyo.openiap.Product
@@ -192,11 +191,6 @@ class OpenIapStore(private val module: OpenIapModule) {
                     val existingProductIds = _products.value.map { it.id }.toSet()
                     val productsToAdd = subProducts.filter { it.id !in existingProductIds }
                     _products.value = _products.value + productsToAdd
-                }
-                is FetchProductsResultAll -> {
-                    // For All type, replace with combined results
-                    _products.value = result.products.orEmpty()
-                    _subscriptions.value = result.subscriptions.orEmpty()
                 }
             }
             result
