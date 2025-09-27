@@ -115,26 +115,50 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
             if (params.skus.isEmpty() && params.type != ProductQueryType.All) throw OpenIapError.EmptySkuList
 
             val queryType = params.type ?: ProductQueryType.All
-            val includeInApp = queryType == ProductQueryType.InApp || queryType == ProductQueryType.All
-            val includeSubs = queryType == ProductQueryType.Subs || queryType == ProductQueryType.All
-
-            val inAppProducts = if (includeInApp) {
-                queryProductDetails(client, productManager, params.skus, BillingClient.ProductType.INAPP)
-                    .map { it.toInAppProduct() }
-            } else emptyList()
-
-            val subscriptionProducts = if (includeSubs) {
-                queryProductDetails(client, productManager, params.skus, BillingClient.ProductType.SUBS)
-                    .map { it.toSubscriptionProduct() }
-            } else emptyList()
 
             when (queryType) {
-                ProductQueryType.InApp -> FetchProductsResultProducts(inAppProducts)
-                ProductQueryType.Subs -> FetchProductsResultSubscriptions(subscriptionProducts)
+                ProductQueryType.InApp -> {
+                    val inAppProducts = queryProductDetails(client, productManager, params.skus, BillingClient.ProductType.INAPP)
+                        .map { it.toInAppProduct() }
+                    FetchProductsResultProducts(inAppProducts)
+                }
+                ProductQueryType.Subs -> {
+                    val subscriptionProducts = queryProductDetails(client, productManager, params.skus, BillingClient.ProductType.SUBS)
+                        .map { it.toSubscriptionProduct() }
+                    FetchProductsResultSubscriptions(subscriptionProducts)
+                }
                 ProductQueryType.All -> {
-                    // For All type, combine products and return as Products result
-                    val allProducts = inAppProducts + subscriptionProducts.filterIsInstance<ProductSubscriptionAndroid>().map { it.toProduct() }
-                    FetchProductsResultProducts(allProducts)
+                    // Query both types but filter results to avoid duplicates
+                    // Some products might be returned in both queries, so we need to deduplicate
+                    val productMap = mutableMapOf<String, Product>()
+
+                    // First, try to get as INAPP products
+                    val inAppDetails = runCatching {
+                        queryProductDetails(client, productManager, params.skus, BillingClient.ProductType.INAPP)
+                    }.getOrDefault(emptyList())
+
+                    inAppDetails.forEach { detail ->
+                        productMap[detail.productId] = detail.toInAppProduct()
+                    }
+
+                    // Then, get as subscription products (these override INAPP if both exist)
+                    val subsDetails = runCatching {
+                        queryProductDetails(client, productManager, params.skus, BillingClient.ProductType.SUBS)
+                    }.getOrDefault(emptyList())
+
+                    subsDetails.forEach { detail ->
+                        // Convert subscription to Product type and override any existing INAPP with same ID
+                        productMap[detail.productId] = detail.toSubscriptionProduct().toProduct()
+                    }
+
+                    // Return products in the order they were requested
+                    val orderedProducts = if (params.skus.isNotEmpty()) {
+                        params.skus.mapNotNull { productMap[it] }
+                    } else {
+                        productMap.values.toList()
+                    }
+
+                    FetchProductsResultProducts(orderedProducts)
                 }
             }
         }
