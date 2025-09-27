@@ -62,15 +62,11 @@ fun AllProductsScreen(
                 val connected = iapStore.initConnection()
                 if (connected) {
                     iapStore.setActivity(activity)
-                    // Fetch in-app products and subscriptions separately
-                    // This ensures proper type classification
+                    // Fetch all products at once using ProductQueryType.All
+                    // This fetches both in-app and subscription products in a single call
                     iapStore.fetchProducts(
-                        skus = IapConstants.INAPP_SKUS,
-                        type = ProductQueryType.InApp
-                    )
-                    iapStore.fetchProducts(
-                        skus = IapConstants.SUBS_SKUS,
-                        type = ProductQueryType.Subs
+                        skus = IapConstants.INAPP_SKUS + IapConstants.SUBS_SKUS,
+                        type = ProductQueryType.All
                     )
                 }
             } catch (_: Exception) { }
@@ -143,14 +139,10 @@ fun AllProductsScreen(
                                     val connected = iapStore.initConnection()
                                     if (connected) {
                                         iapStore.setActivity(activity)
-                                        // Fetch products after reconnecting - separately to ensure proper types
+                                        // Fetch all products after reconnecting using ProductQueryType.All
                                         iapStore.fetchProducts(
-                                            skus = IapConstants.INAPP_SKUS,
-                                            type = ProductQueryType.InApp
-                                        )
-                                        iapStore.fetchProducts(
-                                            skus = IapConstants.SUBS_SKUS,
-                                            type = ProductQueryType.Subs
+                                            skus = IapConstants.INAPP_SKUS + IapConstants.SUBS_SKUS,
+                                            type = ProductQueryType.All
                                         )
                                     }
                                 } catch (_: Exception) { }

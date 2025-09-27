@@ -4,11 +4,13 @@ object IapConstants {
     // App-defined SKU lists
     val INAPP_SKUS = listOf(
         "dev.hyo.martie.10bulbs",
-        "dev.hyo.martie.30bulbs"
+        "dev.hyo.martie.30bulbs",
+        "dev.hyo.martie.certified"  // Non-consumable
     )
 
     val SUBS_SKUS = listOf(
-        "dev.hyo.martie.premium"
+        "dev.hyo.martie.premium",
+        "dev.hyo.martie.premium_year"
     )
 }
 
