@@ -562,6 +562,8 @@ public data class FetchProductsResultProducts(val value: List<Product>?) : Fetch
 
 public data class FetchProductsResultSubscriptions(val value: List<ProductSubscription>?) : FetchProductsResult
 
+public data class FetchProductsResultAll(val products: List<Product>?, val subscriptions: List<ProductSubscription>?) : FetchProductsResult
+
 public data class PricingPhaseAndroid(
     val billingCycleCount: Int,
     val billingPeriod: String,

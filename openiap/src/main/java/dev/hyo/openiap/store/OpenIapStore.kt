@@ -3,6 +3,7 @@ package dev.hyo.openiap.store
 import dev.hyo.openiap.ActiveSubscription
 import dev.hyo.openiap.DeepLinkOptions
 import dev.hyo.openiap.FetchProductsResult
+import dev.hyo.openiap.FetchProductsResultAll
 import dev.hyo.openiap.FetchProductsResultProducts
 import dev.hyo.openiap.FetchProductsResultSubscriptions
 import dev.hyo.openiap.Product
@@ -171,15 +172,31 @@ class OpenIapStore(private val module: OpenIapModule) {
             val result = module.fetchProducts(ProductRequest(skus = skus, type = type))
             when (result) {
                 is FetchProductsResultProducts -> {
-                    _products.value = result.value.orEmpty()
-                    _subscriptions.value = emptyList()
+                    // Merge new in-app products with existing ones
+                    val newProducts = result.value.orEmpty()
+                    val existingProductIds = _products.value.map { it.id }.toSet()
+                    val productsToAdd = newProducts.filter { it.id !in existingProductIds }
+                    _products.value = _products.value + productsToAdd
                 }
                 is FetchProductsResultSubscriptions -> {
+                    // Merge new subscriptions with existing ones
                     val subs = result.value.orEmpty()
-                    _subscriptions.value = subs
-                    _products.value = subs
+                    val existingSubIds = _subscriptions.value.map { it.id }.toSet()
+                    val subsToAdd = subs.filter { it.id !in existingSubIds }
+                    _subscriptions.value = _subscriptions.value + subsToAdd
+                    
+                    // Also add subscription products to products list
+                    val subProducts = subs
                         .filterIsInstance<ProductSubscriptionAndroid>()
                         .map { it.toProduct() }
+                    val existingProductIds = _products.value.map { it.id }.toSet()
+                    val productsToAdd = subProducts.filter { it.id !in existingProductIds }
+                    _products.value = _products.value + productsToAdd
+                }
+                is FetchProductsResultAll -> {
+                    // Replace all with the combined result
+                    _products.value = result.products.orEmpty()
+                    _subscriptions.value = result.subscriptions.orEmpty()
                 }
             }
             result

@@ -49,6 +49,10 @@ fun AppNavigation() {
             HomeScreen(navController)
         }
         
+        composable("all_products") {
+            AllProductsScreen(navController)
+        }
+        
         composable("purchase_flow") {
             PurchaseFlowScreen(navController)
         }
