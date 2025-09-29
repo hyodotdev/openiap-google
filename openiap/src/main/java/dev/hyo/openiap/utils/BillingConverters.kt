@@ -10,7 +10,9 @@ import dev.hyo.openiap.ProductAndroidOneTimePurchaseOfferDetail
 import dev.hyo.openiap.ProductSubscriptionAndroid
 import dev.hyo.openiap.ProductSubscriptionAndroidOfferDetails
 import dev.hyo.openiap.ProductType
+import dev.hyo.openiap.Purchase
 import dev.hyo.openiap.PurchaseAndroid
+import dev.hyo.openiap.PurchaseInput
 import dev.hyo.openiap.PurchaseState
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
@@ -151,4 +153,16 @@ fun ProductSubscriptionAndroid.toProduct(): Product = ProductAndroid(
     subscriptionOfferDetailsAndroid = subscriptionOfferDetailsAndroid,
     title = title,
     type = type
+)
+
+fun Purchase.toPurchaseInput(): PurchaseInput = PurchaseInput(
+    id = id,
+    ids = ids,
+    isAutoRenewing = isAutoRenewing,
+    platform = platform,
+    productId = productId,
+    purchaseState = purchaseState,
+    purchaseToken = purchaseToken,
+    quantity = quantity,
+    transactionDate = transactionDate
 )

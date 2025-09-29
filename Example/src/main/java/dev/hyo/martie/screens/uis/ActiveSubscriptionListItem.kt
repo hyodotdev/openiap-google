@@ -1,5 +1,6 @@
 package dev.hyo.martie.screens.uis
 
+import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,10 +14,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.hyo.martie.models.AppColors
+import dev.hyo.martie.util.SUBSCRIPTION_PREFS_NAME
+import dev.hyo.martie.util.resolvePremiumOfferInfo
 import dev.hyo.openiap.PurchaseAndroid
 
 @Composable
@@ -25,6 +31,14 @@ fun ActiveSubscriptionListItem(
     statusText: String? = null,
     onClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val prefs = remember(context) {
+        context.getSharedPreferences(SUBSCRIPTION_PREFS_NAME, Context.MODE_PRIVATE)
+    }
+    val premiumOfferInfo = remember(purchase.productId, purchase.purchaseToken, purchase.dataAndroid) {
+        resolvePremiumOfferInfo(prefs, purchase)
+    }
+
     OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -47,10 +61,38 @@ fun ActiveSubscriptionListItem(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // Display SKU title (human-readable name) as main title
+                val displayTitle = when (purchase.productId) {
+                    "dev.hyo.martie.premium" -> "Premium Subscription"
+                    "dev.hyo.martie.premium_year" -> "Premium Yearly"
+                    "dev.hyo.martie.10bulbs" -> "10 Light Bulbs"
+                    "dev.hyo.martie.30bulbs" -> "30 Light Bulbs"
+                    "dev.hyo.martie.certified" -> "Certified Badge"
+                    else -> purchase.productId.substringAfterLast('.').replace('_', ' ')
+                        .replaceFirstChar { it.uppercase() }
+                }
+
                 Text(
-                    purchase.productId,
-                    style = MaterialTheme.typography.titleMedium
+                    displayTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
                 )
+
+                // Show plan info and product ID below
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (premiumOfferInfo != null) {
+                        Text(
+                            "Plan: ${premiumOfferInfo.displayName}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.textSecondary
+                        )
+                    }
+                    Text(
+                        "Product ID: ${purchase.productId}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppColors.textSecondary.copy(alpha = 0.7f)
+                    )
+                }
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -78,6 +120,20 @@ fun ActiveSubscriptionListItem(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = AppColors.secondary
+                            )
+                        }
+                    }
+
+                    premiumOfferInfo?.let { offer ->
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = AppColors.primary.copy(alpha = 0.12f)
+                        ) {
+                            Text(
+                                offer.basePlanId,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AppColors.primary
                             )
                         }
                     }

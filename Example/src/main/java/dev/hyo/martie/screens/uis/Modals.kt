@@ -7,17 +7,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import dev.hyo.martie.models.AppColors
+import dev.hyo.martie.util.SUBSCRIPTION_PREFS_NAME
+import dev.hyo.martie.util.resolvePremiumOfferInfo
 import dev.hyo.openiap.ProductAndroid
 import dev.hyo.openiap.ProductType
 import dev.hyo.openiap.PurchaseAndroid
@@ -205,6 +209,13 @@ fun PurchaseDetailModal(
     onDismiss: () -> Unit
 ) {
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    val prefs = remember(context) {
+        context.getSharedPreferences(SUBSCRIPTION_PREFS_NAME, Context.MODE_PRIVATE)
+    }
+    val premiumOfferInfo = remember(purchase.productId, purchase.purchaseToken, purchase.dataAndroid) {
+        resolvePremiumOfferInfo(prefs, purchase)
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -284,6 +295,10 @@ fun PurchaseDetailModal(
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val detailRows = buildList {
+                        premiumOfferInfo?.let {
+                            add("offerDisplayName" to it.displayName)
+                            add("offerBasePlanId" to it.basePlanId)
+                        }
                         add("id" to purchase.id)
                         add("transactionId" to (purchase.transactionId ?: "-"))
                         add("purchaseToken" to (purchase.purchaseToken ?: "-"))
