@@ -236,6 +236,7 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
                     if (androidArgs.type == ProductQueryType.Subs) {
                         androidArgs.subscriptionOffers.orEmpty().forEach { offer ->
                             if (offer.offerToken.isNotEmpty()) {
+                                OpenIapLog.d("Adding offer token for SKU ${offer.sku}: ${offer.offerToken}", TAG)
                                 val queue = requestedOffersBySku.getOrPut(offer.sku) { mutableListOf() }
                                 queue.add(offer.offerToken)
                             }
@@ -247,6 +248,11 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
                             .setProductDetails(productDetails)
 
                         if (androidArgs.type == ProductQueryType.Subs) {
+                            val availableOffers = productDetails.subscriptionOfferDetails?.map {
+                                "${it.basePlanId}:${it.offerToken}"
+                            } ?: emptyList()
+                            OpenIapLog.d("Available offers for ${productDetails.productId}: $availableOffers", TAG)
+
                             val availableTokens = productDetails.subscriptionOfferDetails?.map { it.offerToken } ?: emptyList()
                             val fromQueue = requestedOffersBySku[productDetails.productId]?.let { queue ->
                                 if (queue.isNotEmpty()) queue.removeAt(0) else null
@@ -254,7 +260,10 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
                             val fromIndex = androidArgs.subscriptionOffers?.getOrNull(index)?.takeIf { it.sku == productDetails.productId }?.offerToken
                             val resolved = fromQueue ?: fromIndex ?: productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
 
+                            OpenIapLog.d("Resolved offer token for ${productDetails.productId}: $resolved", TAG)
+
                             if (resolved.isNullOrEmpty() || (availableTokens.isNotEmpty() && !availableTokens.contains(resolved))) {
+                                OpenIapLog.w("Invalid offer token: $resolved not in $availableTokens", TAG)
                                 val err = OpenIapError.SkuOfferMismatch
                                 purchaseErrorListeners.forEach { listener -> runCatching { listener.onPurchaseError(err) } }
                                 currentPurchaseCallback?.invoke(Result.success(emptyList()))
@@ -272,18 +281,49 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
                         .setIsOfferPersonalized(androidArgs.isOfferPersonalized == true)
 
                     androidArgs.obfuscatedAccountId?.let { flowBuilder.setObfuscatedAccountId(it) }
-                    androidArgs.obfuscatedProfileId?.let { flowBuilder.setObfuscatedProfileId(it) }
 
+                    // For subscription upgrades/downgrades, purchaseToken and obfuscatedProfileId are mutually exclusive
                     if (androidArgs.type == ProductQueryType.Subs && !androidArgs.purchaseTokenAndroid.isNullOrBlank()) {
+                        // This is a subscription upgrade/downgrade - do not set obfuscatedProfileId
+                        OpenIapLog.d("=== Subscription Upgrade Flow ===", TAG)
+                        OpenIapLog.d("  - Old Token: ${androidArgs.purchaseTokenAndroid.take(10)}...", TAG)
+                        OpenIapLog.d("  - Target SKUs: ${androidArgs.skus}", TAG)
+                        OpenIapLog.d("  - Replacement mode: ${androidArgs.replacementModeAndroid}", TAG)
+                        OpenIapLog.d("  - Product Details Count: ${paramsList.size}", TAG)
+                        paramsList.forEachIndexed { index, params ->
+                            OpenIapLog.d("  - Product[$index]: SKU=${details[index].productId}, offerToken=...", TAG)
+                        }
+
                         val updateParamsBuilder = BillingFlowParams.SubscriptionUpdateParams.newBuilder()
                             .setOldPurchaseToken(androidArgs.purchaseTokenAndroid)
-                        androidArgs.replacementModeAndroid?.let { updateParamsBuilder.setSubscriptionReplacementMode(it) }
-                        flowBuilder.setSubscriptionUpdateParams(updateParamsBuilder.build())
+
+                        // Set replacement mode - this is critical for upgrades
+                        val replacementMode = androidArgs.replacementModeAndroid ?: 5 // Default to CHARGE_FULL_PRICE
+                        updateParamsBuilder.setSubscriptionReplacementMode(replacementMode)
+                        OpenIapLog.d("  - Final replacement mode: $replacementMode", TAG)
+
+                        val updateParams = updateParamsBuilder.build()
+                        flowBuilder.setSubscriptionUpdateParams(updateParams)
+                        OpenIapLog.d("=== Subscription Update Params Set ===", TAG)
+                    } else {
+                        // Only set obfuscatedProfileId for new purchases, not upgrades
+                        androidArgs.obfuscatedProfileId?.let {
+                            OpenIapLog.d("Setting obfuscatedProfileId for new purchase", TAG)
+                            flowBuilder.setObfuscatedProfileId(it)
+                        }
                     }
 
                     val result = client.launchBillingFlow(activity, flowBuilder.build())
+                    OpenIapLog.d("launchBillingFlow result: ${result.responseCode} - ${result.debugMessage}", TAG)
                     if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                        val err = OpenIapError.PurchaseFailed
+                        val err = when (result.responseCode) {
+                            BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
+                                OpenIapLog.w("DEVELOPER_ERROR: Invalid arguments. Check if subscriptions are in the same group.", TAG)
+                                OpenIapError.PurchaseFailed
+                            }
+                            BillingClient.BillingResponseCode.USER_CANCELED -> OpenIapError.UserCancelled
+                            else -> OpenIapError.PurchaseFailed
+                        }
                         purchaseErrorListeners.forEach { listener -> runCatching { listener.onPurchaseError(err) } }
                         currentPurchaseCallback?.invoke(Result.success(emptyList()))
                     }
