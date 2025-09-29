@@ -27,6 +27,7 @@ import dev.hyo.openiap.Product
 import dev.hyo.openiap.ProductAndroid
 import dev.hyo.openiap.ProductQueryType
 import dev.hyo.openiap.ProductType
+import dev.hyo.openiap.ProductRequest
 import dev.hyo.openiap.ProductSubscription
 import dev.hyo.openiap.store.OpenIapStore
 import dev.hyo.openiap.store.PurchaseResultStatus
@@ -64,10 +65,11 @@ fun AllProductsScreen(
                     iapStore.setActivity(activity)
                     // Fetch all products at once using ProductQueryType.All
                     // This fetches both in-app and subscription products in a single call
-                    iapStore.fetchProducts(
+                    val request = ProductRequest(
                         skus = IapConstants.INAPP_SKUS + IapConstants.SUBS_SKUS,
                         type = ProductQueryType.All
                     )
+                    iapStore.fetchProducts(request)
                 }
             } catch (_: Exception) { }
         }
@@ -140,10 +142,11 @@ fun AllProductsScreen(
                                     if (connected) {
                                         iapStore.setActivity(activity)
                                         // Fetch all products after reconnecting using ProductQueryType.All
-                                        iapStore.fetchProducts(
+                                        val request = ProductRequest(
                                             skus = IapConstants.INAPP_SKUS + IapConstants.SUBS_SKUS,
                                             type = ProductQueryType.All
                                         )
+                                        iapStore.fetchProducts(request)
                                     }
                                 } catch (_: Exception) { }
                             }

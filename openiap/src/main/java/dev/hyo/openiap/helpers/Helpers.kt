@@ -112,11 +112,18 @@ internal fun RequestPurchaseProps.toAndroidPurchaseArgs(): AndroidPurchaseArgs {
         is RequestPurchaseProps.Request.Subscription -> {
             val android = payload.value.android
                 ?: throw IllegalArgumentException("Android subscription parameters are required")
+
+            // For subscription upgrades/downgrades, obfuscatedProfileIdAndroid and purchaseTokenAndroid
+            // are mutually exclusive. If purchaseTokenAndroid is provided (upgrade scenario),
+            // we should not send obfuscatedProfileIdAndroid to avoid "Invalid arguments" error
+            val isUpgrade = !android.purchaseTokenAndroid.isNullOrEmpty()
+            val effectiveObfuscatedProfileId = if (isUpgrade) null else android.obfuscatedProfileIdAndroid
+
             AndroidPurchaseArgs(
                 skus = android.skus,
                 isOfferPersonalized = android.isOfferPersonalized,
                 obfuscatedAccountId = android.obfuscatedAccountIdAndroid,
-                obfuscatedProfileId = android.obfuscatedProfileIdAndroid,
+                obfuscatedProfileId = effectiveObfuscatedProfileId,
                 purchaseTokenAndroid = android.purchaseTokenAndroid,
                 replacementModeAndroid = android.replacementModeAndroid,
                 subscriptionOffers = android.subscriptionOffers,

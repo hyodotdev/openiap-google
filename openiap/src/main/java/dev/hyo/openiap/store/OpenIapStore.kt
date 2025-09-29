@@ -1,6 +1,7 @@
 package dev.hyo.openiap.store
 
 import dev.hyo.openiap.ActiveSubscription
+import dev.hyo.openiap.AndroidSubscriptionOfferInput
 import dev.hyo.openiap.DeepLinkOptions
 import dev.hyo.openiap.FetchProductsResult
 import dev.hyo.openiap.FetchProductsResultProducts
@@ -22,6 +23,13 @@ import dev.hyo.openiap.RequestSubscriptionAndroidProps
 import dev.hyo.openiap.RequestSubscriptionPropsByPlatforms
 import dev.hyo.openiap.RequestPurchaseResultPurchase
 import dev.hyo.openiap.RequestPurchaseResultPurchases
+import dev.hyo.openiap.RequestPurchaseResult
+import dev.hyo.openiap.MutationRequestPurchaseHandler
+import dev.hyo.openiap.QueryFetchProductsHandler
+import dev.hyo.openiap.QueryGetAvailablePurchasesHandler
+import dev.hyo.openiap.MutationFinishTransactionHandler
+import dev.hyo.openiap.MutationInitConnectionHandler
+import dev.hyo.openiap.MutationEndConnectionHandler
 import android.app.Activity
 import android.content.Context
 import com.android.billingclient.api.BillingClient
@@ -132,13 +140,20 @@ class OpenIapStore(private val module: OpenIapModule) {
     }
 
     // -------------------------------------------------------------------------
-    // Connection Management
+    // Connection Management - Using GraphQL handler pattern
     // -------------------------------------------------------------------------
-    suspend fun initConnection(): Boolean {
+    val initConnection: MutationInitConnectionHandler = {
         setLoading { it.initConnection = true }
-        return try {
+        try {
             val ok = module.initConnection()
             _isConnected.value = ok
+
+            // Add listeners when connected
+            if (ok) {
+                addPurchaseUpdateListener(purchaseUpdateListener)
+                addPurchaseErrorListener(purchaseErrorListener)
+            }
+
             ok
         } catch (e: Exception) {
             setError(e.message)
@@ -148,10 +163,13 @@ class OpenIapStore(private val module: OpenIapModule) {
         }
     }
 
-    suspend fun endConnection(): Boolean {
-        return try {
+    val endConnection: MutationEndConnectionHandler = {
+        removePurchaseUpdateListener(purchaseUpdateListener)
+        removePurchaseErrorListener(purchaseErrorListener)
+        try {
             val ok = module.endConnection()
             _isConnected.value = false
+            clear()
             ok
         } catch (e: Exception) {
             setError(e.message)
@@ -159,16 +177,14 @@ class OpenIapStore(private val module: OpenIapModule) {
         }
     }
 
+
     // -------------------------------------------------------------------------
-    // Product Management
+    // Product Management - Using GraphQL handler pattern
     // -------------------------------------------------------------------------
-    suspend fun fetchProducts(
-        skus: List<String>,
-        type: ProductQueryType = ProductQueryType.All
-    ): FetchProductsResult {
+    val fetchProducts: QueryFetchProductsHandler = { request ->
         setLoading { it.fetchProducts = true }
-        return try {
-            val result = module.fetchProducts(ProductRequest(skus = skus, type = type))
+        try {
+            val result = module.fetchProducts(request)
             when (result) {
                 is FetchProductsResultProducts -> {
                     // Merge new products with existing ones
@@ -183,7 +199,7 @@ class OpenIapStore(private val module: OpenIapModule) {
                     val existingSubIds = _subscriptions.value.map { it.id }.toSet()
                     val subsToAdd = subs.filter { it.id !in existingSubIds }
                     _subscriptions.value = _subscriptions.value + subsToAdd
-                    
+
                     // Also add subscription products to products list
                     val subProducts = subs
                         .filterIsInstance<ProductSubscriptionAndroid>()
@@ -202,12 +218,13 @@ class OpenIapStore(private val module: OpenIapModule) {
         }
     }
 
+
     // -------------------------------------------------------------------------
-    // Purchases / Restore
+    // Purchases / Restore - Using GraphQL handler pattern
     // -------------------------------------------------------------------------
-    suspend fun getAvailablePurchases(options: PurchaseOptions? = null): List<Purchase> {
+    val getAvailablePurchases: QueryGetAvailablePurchasesHandler = { options ->
         setLoading { it.restorePurchases = true }
-        return try {
+        try {
             val result = module.getAvailablePurchases(options)
             _availablePurchases.value = result
             result
@@ -219,51 +236,45 @@ class OpenIapStore(private val module: OpenIapModule) {
         }
     }
 
-    suspend fun restorePurchases(): List<Purchase> = getAvailablePurchases()
-
-    suspend fun loadPurchases(): List<Purchase> = getAvailablePurchases()
 
     // -------------------------------------------------------------------------
-    // Purchase Flow
+    // Purchase Flow - Using GraphQL handler pattern
     // -------------------------------------------------------------------------
-    suspend fun requestPurchase(
-        skus: List<String>,
-        type: ProductQueryType = ProductQueryType.InApp
-    ): List<Purchase> {
-        val skuForStatus = skus.firstOrNull()
+    val requestPurchase: MutationRequestPurchaseHandler = { props ->
+        val skuForStatus = when (val request = props.request) {
+            is RequestPurchaseProps.Request.Purchase -> request.value.android?.skus?.firstOrNull()
+            is RequestPurchaseProps.Request.Subscription -> request.value.android?.skus?.firstOrNull()
+            else -> null
+        }
+
         if (skuForStatus != null) {
             addPurchasing(skuForStatus)
             pendingRequestProductId = skuForStatus
         }
-        return try {
-            val request = buildRequestPurchaseProps(skus, type)
-            when (val result = module.requestPurchase(request)) {
-                is RequestPurchaseResultPurchases -> result.value.orEmpty()
-                is RequestPurchaseResultPurchase -> result.value?.let(::listOf).orEmpty()
-                else -> emptyList()
-            }
+
+        try {
+            module.requestPurchase(props)
         } finally {
             if (skuForStatus != null) removePurchasing(skuForStatus)
         }
     }
 
-    suspend fun finishTransaction(
-        purchase: Purchase,
-        isConsumable: Boolean = false
-    ): Boolean {
-        val token = purchase.purchaseToken
-        if ((purchase is PurchaseAndroid && purchase.isAcknowledgedAndroid == true) || (token != null && processedPurchaseTokens.contains(token))) {
-            return true
-        }
-        return try {
-            module.finishTransaction(purchase.toInput(), isConsumable)
-            if (token != null) processedPurchaseTokens.add(token)
-            true
-        } catch (e: Exception) {
-            setError(e.message)
-            throw e
+
+    // Using GraphQL handler pattern
+    val finishTransaction: MutationFinishTransactionHandler = { purchaseInput, isConsumable ->
+        val token = purchaseInput.purchaseToken
+        // Check if already processed - but we can't check isAcknowledgedAndroid on PurchaseInput
+        if (token == null || !processedPurchaseTokens.contains(token)) {
+            try {
+                module.finishTransaction(purchaseInput, isConsumable)
+                if (token != null) processedPurchaseTokens.add(token)
+            } catch (e: Exception) {
+                setError(e.message)
+                throw e
+            }
         }
     }
+
 
     // -------------------------------------------------------------------------
     // Subscriptions
@@ -352,57 +363,6 @@ class OpenIapStore(private val module: OpenIapModule) {
         _status.value = current.copy(loadings = current.loadings.copy(purchasing = set))
     }
 
-    private fun buildRequestPurchaseProps(skus: List<String>, type: ProductQueryType): RequestPurchaseProps {
-        return when (type) {
-            ProductQueryType.InApp -> {
-                val android = RequestPurchaseAndroidProps(
-                    isOfferPersonalized = null,
-                    obfuscatedAccountIdAndroid = null,
-                    obfuscatedProfileIdAndroid = null,
-                    skus = skus
-                )
-                RequestPurchaseProps(
-                    request = RequestPurchaseProps.Request.Purchase(
-                        RequestPurchasePropsByPlatforms(android = android)
-                    ),
-                    type = ProductQueryType.InApp
-                )
-            }
-            ProductQueryType.Subs -> {
-                val android = RequestSubscriptionAndroidProps(
-                    isOfferPersonalized = null,
-                    obfuscatedAccountIdAndroid = null,
-                    obfuscatedProfileIdAndroid = null,
-                    purchaseTokenAndroid = null,
-                    replacementModeAndroid = null,
-                    skus = skus,
-                    subscriptionOffers = null
-                )
-                RequestPurchaseProps(
-                    request = RequestPurchaseProps.Request.Subscription(
-                        RequestSubscriptionPropsByPlatforms(android = android)
-                    ),
-                    type = ProductQueryType.Subs
-                )
-            }
-            ProductQueryType.All -> throw IllegalArgumentException("type must be InApp or Subs when requesting a purchase")
-        }
-    }
-
-    private fun Purchase.toInput(): PurchaseInput = when (this) {
-        is PurchaseAndroid -> PurchaseInput(
-            id = id,
-            ids = ids,
-            isAutoRenewing = isAutoRenewing,
-            platform = platform,
-            productId = productId,
-            purchaseState = purchaseState,
-            purchaseToken = purchaseToken,
-            quantity = quantity,
-            transactionDate = transactionDate
-        )
-        else -> throw UnsupportedOperationException("Only Android purchases are supported on this platform")
-    }
 }
 
 // -----------------------------------------------------------------------------

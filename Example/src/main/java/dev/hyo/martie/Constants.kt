@@ -9,8 +9,12 @@ object IapConstants {
     )
 
     val SUBS_SKUS = listOf(
-        "dev.hyo.martie.premium",
-        "dev.hyo.martie.premium_year"
+        "dev.hyo.martie.premium",      // Main subscription with multiple offers
+        "dev.hyo.martie.premium_year"  // Separate yearly subscription product
     )
+
+    // Base plan IDs for dev.hyo.martie.premium subscription
+    const val PREMIUM_MONTHLY_BASE_PLAN = "premium"       // Monthly base plan
+    const val PREMIUM_YEARLY_BASE_PLAN = "premium-year"   // Yearly base plan
 }
 

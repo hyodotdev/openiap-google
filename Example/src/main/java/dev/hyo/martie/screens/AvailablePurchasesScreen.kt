@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import dev.hyo.martie.models.AppColors
 import dev.hyo.martie.screens.uis.*
+import dev.hyo.martie.util.PREMIUM_SUBSCRIPTION_PRODUCT_ID
 import dev.hyo.openiap.IapContext
 import dev.hyo.openiap.PurchaseAndroid
 import dev.hyo.openiap.PurchaseState
@@ -53,7 +54,7 @@ fun AvailablePurchasesScreen(
             try {
                 val connected = iapStore.initConnection()
                 if (connected) {
-                    iapStore.getAvailablePurchases()
+                    iapStore.getAvailablePurchases(null)
                 }
             } catch (_: Exception) { }
         }
@@ -77,7 +78,7 @@ fun AvailablePurchasesScreen(
                         onClick = {
                             scope.launch {
                                 try {
-                                    val restored = iapStore.restorePurchases()
+                                    val restored = iapStore.getAvailablePurchases(null)
                                     iapStore.postStatusMessage(
                                         message = "Restored ${restored.size} purchases",
                                         status = PurchaseResultStatus.Success
@@ -185,14 +186,14 @@ fun AvailablePurchasesScreen(
             }
             val nonConsumables = androidPurchases.filter { 
                 !it.isAutoRenewing && 
-                it.productId != "dev.hyo.martie.premium" &&
+                it.productId != PREMIUM_SUBSCRIPTION_PRODUCT_ID &&
                 !(
                     it.productId.contains("consumable", ignoreCase = true) ||
                     it.productId.contains("bulb", ignoreCase = true)
                 )
             }
             val subscriptions = androidPurchases.filter { 
-                it.isAutoRenewing || it.productId == "dev.hyo.martie.premium"
+                it.isAutoRenewing || it.productId == PREMIUM_SUBSCRIPTION_PRODUCT_ID
             }
             
             // Check for unfinished transactions (purchases that need acknowledgment/consumption)
@@ -217,21 +218,24 @@ fun AvailablePurchasesScreen(
                         onFinish = { isConsumable ->
                             scope.launch {
                                 try {
-                                    val ok = iapStore.finishTransaction(purchase, isConsumable)
-                                    if (ok) {
-                                        iapStore.postStatusMessage(
-                                            message = "Transaction finished successfully",
-                                            status = PurchaseResultStatus.Success,
-                                            productId = purchase.productId
-                                        )
-                                        iapStore.getAvailablePurchases()
-                                    } else {
-                                        iapStore.postStatusMessage(
-                                            message = "Failed to finish transaction",
-                                            status = PurchaseResultStatus.Error,
-                                            productId = purchase.productId
-                                        )
-                                    }
+                                    val purchaseInput = dev.hyo.openiap.PurchaseInput(
+                                        id = purchase.id,
+                                        ids = purchase.ids,
+                                        isAutoRenewing = purchase.isAutoRenewing,
+                                        platform = purchase.platform,
+                                        productId = purchase.productId,
+                                        purchaseState = purchase.purchaseState,
+                                        purchaseToken = purchase.purchaseToken,
+                                        quantity = purchase.quantity,
+                                        transactionDate = purchase.transactionDate
+                                    )
+                                    iapStore.finishTransaction(purchaseInput, isConsumable)
+                                    iapStore.postStatusMessage(
+                                        message = "Transaction finished successfully",
+                                        status = PurchaseResultStatus.Success,
+                                        productId = purchase.productId
+                                    )
+                                    iapStore.getAvailablePurchases(null)
                                 } catch (e: Exception) {
                                     iapStore.postStatusMessage(
                                         message = e.message ?: "Failed to finish transaction",
@@ -399,7 +403,7 @@ fun AvailablePurchasesScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
-                        onClick = { scope.launch { iapStore.getAvailablePurchases() } },
+                        onClick = { scope.launch { iapStore.getAvailablePurchases(null) } },
                         modifier = Modifier.weight(1f),
                         enabled = !status.isLoading
                     ) {
@@ -412,7 +416,7 @@ fun AvailablePurchasesScreen(
                         onClick = {
                             scope.launch {
                                 try {
-                                    val restored = iapStore.restorePurchases()
+                                    val restored = iapStore.getAvailablePurchases(null)
                                     iapStore.postStatusMessage(
                                         message = "Restored ${restored.size} purchases",
                                         status = PurchaseResultStatus.Success

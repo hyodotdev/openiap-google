@@ -31,9 +31,17 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import dev.hyo.openiap.ProductAndroid
 import dev.hyo.openiap.ProductQueryType
+import dev.hyo.openiap.ProductRequest
 import dev.hyo.openiap.ProductType
 import dev.hyo.openiap.Purchase
 import dev.hyo.openiap.PurchaseAndroid
+import dev.hyo.openiap.PurchaseInput
+import dev.hyo.openiap.RequestPurchaseProps
+import dev.hyo.openiap.RequestPurchaseAndroidProps
+import dev.hyo.openiap.RequestPurchasePropsByPlatforms
+import dev.hyo.openiap.RequestSubscriptionAndroidProps
+import dev.hyo.openiap.RequestSubscriptionPropsByPlatforms
+import dev.hyo.openiap.utils.toPurchaseInput
 import dev.hyo.martie.util.findActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,11 +82,12 @@ fun PurchaseFlowScreen(
                 val connected = iapStore.initConnection()
                 if (connected) {
                     iapStore.setActivity(activity)
-                    iapStore.fetchProducts(
+                    val request = ProductRequest(
                         skus = IapConstants.INAPP_SKUS,
                         type = ProductQueryType.InApp
                     )
-                    iapStore.getAvailablePurchases()
+                    iapStore.fetchProducts(request)
+                    iapStore.getAvailablePurchases(null)
                 }
             } catch (_: Exception) { }
         }
@@ -107,10 +116,11 @@ fun PurchaseFlowScreen(
                             scope.launch {
                                 try {
                                     iapStore.setActivity(activity)
-                                    iapStore.fetchProducts(
+                                    val request = ProductRequest(
                                         skus = IapConstants.INAPP_SKUS,
                                         type = ProductQueryType.InApp
                                     )
+                                    iapStore.fetchProducts(request)
                                 } catch (_: Exception) { }
                             }
                         },
@@ -238,13 +248,32 @@ fun PurchaseFlowScreen(
                         isPurchasing = status.isPurchasing(androidProduct.id),
                         onPurchase = {
                             scope.launch {
-                                val reqType = if (androidProduct.type == ProductType.Subs)
-                                    ProductQueryType.Subs else ProductQueryType.InApp
                                 iapStore.setActivity(activity)
-                                iapStore.requestPurchase(
-                                    skus = listOf(androidProduct.id),
-                                    type = reqType
-                                )
+                                if (androidProduct.type == ProductType.Subs) {
+                                    val props = RequestPurchaseProps(
+                                        request = RequestPurchaseProps.Request.Subscription(
+                                            RequestSubscriptionPropsByPlatforms(
+                                                android = RequestSubscriptionAndroidProps(
+                                                    skus = listOf(androidProduct.id)
+                                                )
+                                            )
+                                        ),
+                                        type = ProductQueryType.Subs
+                                    )
+                                    iapStore.requestPurchase(props)
+                                } else {
+                                    val props = RequestPurchaseProps(
+                                        request = RequestPurchaseProps.Request.Purchase(
+                                            RequestPurchasePropsByPlatforms(
+                                                android = RequestPurchaseAndroidProps(
+                                                    skus = listOf(androidProduct.id)
+                                                )
+                                            )
+                                        ),
+                                        type = ProductQueryType.InApp
+                                    )
+                                    iapStore.requestPurchase(props)
+                                }
                             }
                         },
                         onClick = {
@@ -263,23 +292,7 @@ fun PurchaseFlowScreen(
                     )
                 }
             }
-            
-            // Active Purchases Section
-            if (androidPurchases.isNotEmpty()) {
-                item {
-                    SectionHeaderView(title = "Active Purchases")
-                }
-                
-                items(androidPurchases) { androidPurchase ->
-                    ActivePurchaseCard(
-                        purchase = androidPurchase,
-                        onClick = {
-                            selectedPurchase = androidPurchase
-                        }
-                    )
-                }
-            }
-            
+
             // Instructions Card
             item {
                 InstructionCard()
@@ -297,7 +310,7 @@ fun PurchaseFlowScreen(
                         onClick = {
                             scope.launch {
                                 try {
-                                    val restored = iapStore.restorePurchases()
+                                    val restored = iapStore.getAvailablePurchases(null)
                                     iapStore.postStatusMessage(
                                         message = "Restored ${restored.size} purchases",
                                         status = PurchaseResultStatus.Success
@@ -322,10 +335,11 @@ fun PurchaseFlowScreen(
                         onClick = {
                             scope.launch {
                                 try {
-                                    iapStore.fetchProducts(
+                                    val request = ProductRequest(
                                         skus = IapConstants.INAPP_SKUS,
                                         type = ProductQueryType.InApp
                                     )
+                                    iapStore.fetchProducts(request)
                                 } catch (_: Exception) { }
                             }
                         },
@@ -380,21 +394,22 @@ fun PurchaseFlowScreen(
             }
 
             // 4) Finish transaction
-            val ok = iapStore.finishTransaction(purchase, isConsumable)
-            if (!ok) {
-                iapStore.postStatusMessage(
-                    message = "finishTransaction failed",
-                    status = PurchaseResultStatus.Error,
-                    productId = purchase.productId
-                )
-            } else {
-                iapStore.loadPurchases()
+            val purchaseInput = purchase.toPurchaseInput()
+            try {
+                iapStore.finishTransaction(purchaseInput, isConsumable)
+                iapStore.getAvailablePurchases(null)  // Reload purchases after finishing
                 iapStore.postStatusMessage(
                     message = "Purchase finished successfully",
                     status = PurchaseResultStatus.Success,
                     productId = purchase.productId
                 )
                 selectedProduct = null
+            } catch (e: Exception) {
+                iapStore.postStatusMessage(
+                    message = "finishTransaction failed: ${e.message}",
+                    status = PurchaseResultStatus.Error,
+                    productId = purchase.productId
+                )
             }
         } catch (e: Exception) {
             iapStore.postStatusMessage(
@@ -412,13 +427,32 @@ fun PurchaseFlowScreen(
             onDismiss = { selectedProduct = null },
             onPurchase = {
                 uiScope.launch {
-                    val reqType = if (product.type == ProductType.Subs)
-                        ProductQueryType.Subs else ProductQueryType.InApp
                     iapStore.setActivity(activity)
-                    iapStore.requestPurchase(
-                        skus = listOf(product.id),
-                        type = reqType
-                    )
+                    if (product.type == ProductType.Subs) {
+                        val props = RequestPurchaseProps(
+                            request = RequestPurchaseProps.Request.Subscription(
+                                RequestSubscriptionPropsByPlatforms(
+                                    android = RequestSubscriptionAndroidProps(
+                                        skus = listOf(product.id)
+                                    )
+                                )
+                            ),
+                            type = ProductQueryType.Subs
+                        )
+                        iapStore.requestPurchase(props)
+                    } else {
+                        val props = RequestPurchaseProps(
+                            request = RequestPurchaseProps.Request.Purchase(
+                                RequestPurchasePropsByPlatforms(
+                                    android = RequestPurchaseAndroidProps(
+                                        skus = listOf(product.id)
+                                    )
+                                )
+                            ),
+                            type = ProductQueryType.InApp
+                        )
+                        iapStore.requestPurchase(props)
+                    }
                 }
             },
             isPurchasing = status.isPurchasing(product.id)
