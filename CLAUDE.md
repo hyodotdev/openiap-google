@@ -16,4 +16,10 @@ Welcome! This repository hosts the Android implementation of OpenIAP.
 3. Put all reusable Kotlin helpers (e.g., safe map accessors) into the `utils` package so they can be used without modifying generated output.
 4. After code generation or dependency changes, compile with `./gradlew :openiap:compileDebugKotlin` (or the appropriate target) to verify the build stays green.
 
+## Updating openiap-gql Version
+
+1. Edit `openiap-versions.json` and update the `gql` field to the desired version
+2. Run `./scripts/generate-types.sh` to download and regenerate Types.kt
+3. Compile to verify: `./gradlew :openiap:compileDebugKotlin`
+
 Refer back to this document and `CONVENTION.md` whenever you are unsure about workflow expectations.

@@ -247,6 +247,16 @@ sealed class OpenIapError : Exception() {
         const val MESSAGE = "The request has reached the maximum timeout before Google Play responds"
     }
 
+    class AlternativeBillingUnavailable(val details: String) : OpenIapError() {
+        val CODE = ErrorCode.BillingUnavailable.rawValue
+        override val code = CODE
+        override val message = details
+
+        companion object {
+            val CODE = ErrorCode.BillingUnavailable.rawValue
+        }
+    }
+
     companion object {
         private val defaultMessages: Map<String, String> by lazy {
             mapOf(

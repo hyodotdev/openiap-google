@@ -87,10 +87,11 @@ fun HomeScreen(navController: NavController) {
                 columns = GridCells.Fixed(2),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(400.dp)
+                    .height(600.dp)
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                userScrollEnabled = false
             ) {
                 item {
                     FeatureCard(
@@ -103,7 +104,7 @@ fun HomeScreen(navController: NavController) {
                         }
                     )
                 }
-                
+
                 item {
                     FeatureCard(
                         title = "Subscription\nFlow",
@@ -115,7 +116,7 @@ fun HomeScreen(navController: NavController) {
                         }
                     )
                 }
-                
+
                 item {
                     FeatureCard(
                         title = "Available\nPurchases",
@@ -127,7 +128,7 @@ fun HomeScreen(navController: NavController) {
                         }
                     )
                 }
-                
+
                 item {
                     FeatureCard(
                         title = "Offer\nCode",
@@ -136,6 +137,18 @@ fun HomeScreen(navController: NavController) {
                         color = AppColors.warning,
                         onClick = {
                             navController.navigate("offer_code")
+                        }
+                    )
+                }
+
+                item {
+                    FeatureCard(
+                        title = "Alternative\nBilling",
+                        subtitle = "Test alternative payment",
+                        icon = Icons.Default.Payment,
+                        color = AppColors.info,
+                        onClick = {
+                            navController.navigate("alternative_billing")
                         }
                     )
                 }
