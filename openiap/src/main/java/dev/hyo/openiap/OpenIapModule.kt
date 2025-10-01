@@ -1030,4 +1030,13 @@ class OpenIapModule(
     fun setActivity(activity: Activity?) {
         currentActivityRef = activity?.let { WeakReference(it) }
     }
+
+    /**
+     * Set user choice billing listener
+     *
+     * @param listener User choice billing listener
+     */
+    fun setUserChoiceBillingListener(listener: dev.hyo.openiap.listener.UserChoiceBillingListener?) {
+        userChoiceBillingListener = listener
+    }
 }

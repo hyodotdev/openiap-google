@@ -39,9 +39,12 @@ import dev.hyo.openiap.OpenIapModule
 import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
 import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
 import dev.hyo.openiap.utils.toProduct
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * OpenIapStore (Android)
@@ -61,7 +64,7 @@ class OpenIapStore(private val module: OpenIapModule) {
     constructor(
         context: Context,
         alternativeBillingMode: dev.hyo.openiap.AlternativeBillingMode = dev.hyo.openiap.AlternativeBillingMode.NONE,
-        userChoiceBillingListener: dev.hyo.openiap.listener.UserChoiceBillingListenerAndroid? = null
+        userChoiceBillingListener: dev.hyo.openiap.listener.UserChoiceBillingListener? = null
     ) : this(OpenIapModule(context, alternativeBillingMode, userChoiceBillingListener))
 
     /**
@@ -145,6 +148,16 @@ class OpenIapStore(private val module: OpenIapModule) {
         pendingRequestProductId = null
     }
 
+    /**
+     * Set user choice billing listener
+     * This listener will be called when user selects alternative billing in user choice mode
+     *
+     * @param listener User choice billing listener
+     */
+    fun setUserChoiceBillingListener(listener: dev.hyo.openiap.listener.UserChoiceBillingListener?) {
+        module.setUserChoiceBillingListener(listener)
+    }
+
     // Expose a way to set the current Activity for purchase flows
     fun setActivity(activity: Activity?) {
         module.setActivity(activity)
@@ -174,13 +187,6 @@ class OpenIapStore(private val module: OpenIapModule) {
         try {
             val ok = module.initConnection(config)
             _isConnected.value = ok
-
-            // Add listeners when connected
-            if (ok) {
-                addPurchaseUpdateListener(purchaseUpdateListener)
-                addPurchaseErrorListener(purchaseErrorListener)
-            }
-
             ok
         } catch (e: Exception) {
             setError(e.message)
