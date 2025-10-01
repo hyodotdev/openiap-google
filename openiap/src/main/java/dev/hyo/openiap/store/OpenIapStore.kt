@@ -6,6 +6,7 @@ import dev.hyo.openiap.DeepLinkOptions
 import dev.hyo.openiap.FetchProductsResult
 import dev.hyo.openiap.FetchProductsResultProducts
 import dev.hyo.openiap.FetchProductsResultSubscriptions
+import dev.hyo.openiap.InitConnectionConfig
 import dev.hyo.openiap.Product
 import dev.hyo.openiap.ProductAndroid
 import dev.hyo.openiap.ProductQueryType
@@ -38,17 +39,45 @@ import dev.hyo.openiap.OpenIapModule
 import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
 import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
 import dev.hyo.openiap.utils.toProduct
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * OpenIapStore (Android)
  * Convenience store that wraps OpenIapModule and provides spec-aligned, suspend APIs
  * with observable StateFlows for UI layers (Compose/XML) to consume.
+ *
+ * @param module OpenIapModule instance
  */
 class OpenIapStore(private val module: OpenIapModule) {
-    constructor(context: Context) : this(OpenIapModule(context))
+    /**
+     * Convenience constructor that creates OpenIapModule
+     *
+     * @param context Android context
+     * @param alternativeBillingMode Alternative billing mode (default: NONE)
+     * @param userChoiceBillingListener Listener for user choice billing selection (optional)
+     */
+    constructor(
+        context: Context,
+        alternativeBillingMode: dev.hyo.openiap.AlternativeBillingMode = dev.hyo.openiap.AlternativeBillingMode.NONE,
+        userChoiceBillingListener: dev.hyo.openiap.listener.UserChoiceBillingListener? = null
+    ) : this(OpenIapModule(context, alternativeBillingMode, userChoiceBillingListener))
+
+    /**
+     * Convenience constructor for backward compatibility
+     *
+     * @param context Android context
+     * @param enableAlternativeBilling Enable alternative billing mode (uses ALTERNATIVE_ONLY mode)
+     */
+    @Deprecated("Use constructor with AlternativeBillingMode instead", ReplaceWith("OpenIapStore(context, if (enableAlternativeBilling) AlternativeBillingMode.ALTERNATIVE_ONLY else AlternativeBillingMode.NONE)"))
+    constructor(
+        context: Context,
+        enableAlternativeBilling: Boolean
+    ) : this(OpenIapModule(context, enableAlternativeBilling))
 
     // Public state
     private val _isConnected = MutableStateFlow(false)
@@ -119,6 +148,16 @@ class OpenIapStore(private val module: OpenIapModule) {
         pendingRequestProductId = null
     }
 
+    /**
+     * Set user choice billing listener
+     * This listener will be called when user selects alternative billing in user choice mode
+     *
+     * @param listener User choice billing listener
+     */
+    fun setUserChoiceBillingListener(listener: dev.hyo.openiap.listener.UserChoiceBillingListener?) {
+        module.setUserChoiceBillingListener(listener)
+    }
+
     // Expose a way to set the current Activity for purchase flows
     fun setActivity(activity: Activity?) {
         module.setActivity(activity)
@@ -142,18 +181,12 @@ class OpenIapStore(private val module: OpenIapModule) {
     // -------------------------------------------------------------------------
     // Connection Management - Using GraphQL handler pattern
     // -------------------------------------------------------------------------
-    val initConnection: MutationInitConnectionHandler = {
+
+    val initConnection: MutationInitConnectionHandler = { config ->
         setLoading { it.initConnection = true }
         try {
-            val ok = module.initConnection()
+            val ok = module.initConnection(config)
             _isConnected.value = ok
-
-            // Add listeners when connected
-            if (ok) {
-                addPurchaseUpdateListener(purchaseUpdateListener)
-                addPurchaseErrorListener(purchaseErrorListener)
-            }
-
             ok
         } catch (e: Exception) {
             setError(e.message)
@@ -162,6 +195,11 @@ class OpenIapStore(private val module: OpenIapModule) {
             setLoading { it.initConnection = false }
         }
     }
+
+    /**
+     * Convenience overload that calls initConnection with null config
+     */
+    suspend fun initConnection(): Boolean = initConnection(null)
 
     val endConnection: MutationEndConnectionHandler = {
         removePurchaseUpdateListener(purchaseUpdateListener)
@@ -286,6 +324,33 @@ class OpenIapStore(private val module: OpenIapModule) {
         module.hasActiveSubscriptions(subscriptionIds)
 
     suspend fun deepLinkToSubscriptions(options: DeepLinkOptions) = module.deepLinkToSubscriptions(options)
+
+    // -------------------------------------------------------------------------
+    // Alternative Billing (Step-by-Step API)
+    // -------------------------------------------------------------------------
+    /**
+     * Step 1: Check if alternative billing is available for this user/device
+     * @return true if available, false otherwise
+     */
+    suspend fun checkAlternativeBillingAvailability(): Boolean = module.checkAlternativeBillingAvailability()
+
+    /**
+     * Step 2: Show alternative billing information dialog to user
+     * Must be called BEFORE processing payment
+     * @param activity Current activity context
+     * @return true if user accepted, false if canceled
+     */
+    suspend fun showAlternativeBillingInformationDialog(activity: Activity): Boolean =
+        module.showAlternativeBillingInformationDialog(activity)
+
+    /**
+     * Step 3: Create external transaction token for alternative billing
+     * Must be called AFTER successful payment in your payment system
+     * Token must be reported to Google Play backend within 24 hours
+     * @return External transaction token, or null if failed
+     */
+    suspend fun createAlternativeBillingReportingToken(): String? =
+        module.createAlternativeBillingReportingToken()
 
     // -------------------------------------------------------------------------
     // Event listeners passthrough

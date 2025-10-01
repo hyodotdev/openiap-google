@@ -18,7 +18,9 @@ class OpenIapViewModel(app: Application) : AndroidViewModel(app) {
     val availablePurchases = store.availablePurchases
     val status = store.status
 
-    fun initConnection() { viewModelScope.launch { runCatching { store.initConnection() } } }
+    fun initConnection(config: InitConnectionConfig? = null) {
+        viewModelScope.launch { runCatching { store.initConnection(config) } }
+    }
     fun endConnection() { viewModelScope.launch { runCatching { store.endConnection() } } }
 
     fun fetchProducts(skus: List<String>, type: ProductQueryType = ProductQueryType.All) {

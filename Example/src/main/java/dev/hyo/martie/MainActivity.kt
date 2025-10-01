@@ -38,7 +38,7 @@ fun AppNavigation() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val startRoute = remember {
         val route = (context as? android.app.Activity)?.intent?.getStringExtra("openiap_route")
-        if (route in setOf("home", "purchase_flow", "subscription_flow", "available_purchases", "offer_code")) route!! else "home"
+        if (route in setOf("home", "purchase_flow", "subscription_flow", "available_purchases", "offer_code", "alternative_billing")) route!! else "home"
     }
 
     NavHost(
@@ -48,25 +48,29 @@ fun AppNavigation() {
         composable("home") {
             HomeScreen(navController)
         }
-        
+
         composable("all_products") {
             AllProductsScreen(navController)
         }
-        
+
         composable("purchase_flow") {
             PurchaseFlowScreen(navController)
         }
-        
+
         composable("subscription_flow") {
             SubscriptionFlowScreen(navController)
         }
-        
+
         composable("available_purchases") {
             AvailablePurchasesScreen(navController)
         }
-        
+
         composable("offer_code") {
             OfferCodeScreen(navController)
+        }
+
+        composable("alternative_billing") {
+            AlternativeBillingScreen(navController)
         }
     }
 }

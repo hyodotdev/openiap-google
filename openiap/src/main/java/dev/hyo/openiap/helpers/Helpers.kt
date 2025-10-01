@@ -90,7 +90,8 @@ internal data class AndroidPurchaseArgs(
     val purchaseTokenAndroid: String?,
     val replacementModeAndroid: Int?,
     val subscriptionOffers: List<AndroidSubscriptionOfferInput>?,
-    val type: ProductQueryType
+    val type: ProductQueryType,
+    val useAlternativeBilling: Boolean?
 )
 
 internal fun RequestPurchaseProps.toAndroidPurchaseArgs(): AndroidPurchaseArgs {
@@ -106,7 +107,8 @@ internal fun RequestPurchaseProps.toAndroidPurchaseArgs(): AndroidPurchaseArgs {
                 purchaseTokenAndroid = null,
                 replacementModeAndroid = null,
                 subscriptionOffers = null,
-                type = type
+                type = type,
+                useAlternativeBilling = useAlternativeBilling
             )
         }
         is RequestPurchaseProps.Request.Subscription -> {
@@ -127,7 +129,8 @@ internal fun RequestPurchaseProps.toAndroidPurchaseArgs(): AndroidPurchaseArgs {
                 purchaseTokenAndroid = android.purchaseTokenAndroid,
                 replacementModeAndroid = android.replacementModeAndroid,
                 subscriptionOffers = android.subscriptionOffers,
-                type = type
+                type = type,
+                useAlternativeBilling = useAlternativeBilling
             )
         }
     }

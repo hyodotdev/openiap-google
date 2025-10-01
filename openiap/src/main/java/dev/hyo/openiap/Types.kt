@@ -8,6 +8,41 @@ package dev.hyo.openiap
 
 // MARK: - Enums
 
+/**
+ * Alternative billing mode for Android
+ * Controls which billing system is used
+ */
+public enum class AlternativeBillingModeAndroid(val rawValue: String) {
+    /**
+     * Standard Google Play billing (default)
+     */
+    None("none"),
+    /**
+     * User choice billing - user can select between Google Play or alternative
+     * Requires Google Play Billing Library 7.0+
+     */
+    UserChoice("user-choice"),
+    /**
+     * Alternative billing only - no Google Play billing option
+     * Requires Google Play Billing Library 6.2+
+     */
+    AlternativeOnly("alternative-only");
+
+    companion object {
+        fun fromJson(value: String): AlternativeBillingModeAndroid = when (value) {
+            "none" -> AlternativeBillingModeAndroid.None
+            "None" -> AlternativeBillingModeAndroid.None
+            "user-choice" -> AlternativeBillingModeAndroid.UserChoice
+            "UserChoice" -> AlternativeBillingModeAndroid.UserChoice
+            "alternative-only" -> AlternativeBillingModeAndroid.AlternativeOnly
+            "AlternativeOnly" -> AlternativeBillingModeAndroid.AlternativeOnly
+            else -> throw IllegalArgumentException("Unknown AlternativeBillingModeAndroid value: $value")
+        }
+    }
+
+    fun toJson(): String = rawValue
+}
+
 public enum class ErrorCode(val rawValue: String) {
     Unknown("unknown"),
     UserCancelled("user-cancelled"),
@@ -1505,6 +1540,29 @@ public data class DiscountOfferInputIOS(
     )
 }
 
+/**
+ * Connection initialization configuration
+ */
+public data class InitConnectionConfig(
+    /**
+     * Alternative billing mode for Android
+     * If not specified, defaults to NONE (standard Google Play billing)
+     */
+    val alternativeBillingModeAndroid: AlternativeBillingModeAndroid? = null
+) {
+    companion object {
+        fun fromJson(json: Map<String, Any?>): InitConnectionConfig {
+            return InitConnectionConfig(
+                alternativeBillingModeAndroid = (json["alternativeBillingModeAndroid"] as String?)?.let { AlternativeBillingModeAndroid.fromJson(it) },
+            )
+        }
+    }
+
+    fun toJson(): Map<String, Any?> = mapOf(
+        "alternativeBillingModeAndroid" to alternativeBillingModeAndroid?.toJson(),
+    )
+}
+
 public data class ProductRequest(
     val skus: List<String>,
     val type: ProductQueryType? = null
@@ -1686,6 +1744,10 @@ public data class RequestPurchaseIosProps(
      */
     val appAccountToken: String? = null,
     /**
+     * External purchase URL for alternative billing (iOS)
+     */
+    val externalPurchaseUrl: String? = null,
+    /**
      * Purchase quantity
      */
     val quantity: Int? = null,
@@ -1703,6 +1765,7 @@ public data class RequestPurchaseIosProps(
             return RequestPurchaseIosProps(
                 andDangerouslyFinishTransactionAutomatically = json["andDangerouslyFinishTransactionAutomatically"] as Boolean?,
                 appAccountToken = json["appAccountToken"] as String?,
+                externalPurchaseUrl = json["externalPurchaseUrl"] as String?,
                 quantity = (json["quantity"] as Number?)?.toInt(),
                 sku = json["sku"] as String,
                 withOffer = (json["withOffer"] as Map<String, Any?>?)?.let { DiscountOfferInputIOS.fromJson(it) },
@@ -1713,6 +1776,7 @@ public data class RequestPurchaseIosProps(
     fun toJson(): Map<String, Any?> = mapOf(
         "andDangerouslyFinishTransactionAutomatically" to andDangerouslyFinishTransactionAutomatically,
         "appAccountToken" to appAccountToken,
+        "externalPurchaseUrl" to externalPurchaseUrl,
         "quantity" to quantity,
         "sku" to sku,
         "withOffer" to withOffer?.toJson(),
@@ -1721,7 +1785,8 @@ public data class RequestPurchaseIosProps(
 
 public data class RequestPurchaseProps(
     val request: Request,
-    val type: ProductQueryType
+    val type: ProductQueryType,
+    val useAlternativeBilling: Boolean? = null
 ) {
     init {
         when (request) {
@@ -1733,19 +1798,20 @@ public data class RequestPurchaseProps(
     companion object {
         fun fromJson(json: Map<String, Any?>): RequestPurchaseProps {
             val rawType = (json["type"] as String?)?.let { ProductQueryType.fromJson(it) }
+            val useAlternativeBilling = json["useAlternativeBilling"] as Boolean?
             val purchaseJson = json["requestPurchase"] as Map<String, Any?>?
             if (purchaseJson != null) {
                 val request = Request.Purchase(RequestPurchasePropsByPlatforms.fromJson(purchaseJson))
                 val finalType = rawType ?: ProductQueryType.InApp
                 require(finalType == ProductQueryType.InApp) { "type must be IN_APP when requestPurchase is provided" }
-                return RequestPurchaseProps(request = request, type = finalType)
+                return RequestPurchaseProps(request = request, type = finalType, useAlternativeBilling = useAlternativeBilling)
             }
             val subscriptionJson = json["requestSubscription"] as Map<String, Any?>?
             if (subscriptionJson != null) {
                 val request = Request.Subscription(RequestSubscriptionPropsByPlatforms.fromJson(subscriptionJson))
                 val finalType = rawType ?: ProductQueryType.Subs
                 require(finalType == ProductQueryType.Subs) { "type must be SUBS when requestSubscription is provided" }
-                return RequestPurchaseProps(request = request, type = finalType)
+                return RequestPurchaseProps(request = request, type = finalType, useAlternativeBilling = useAlternativeBilling)
             }
             throw IllegalArgumentException("RequestPurchaseProps requires requestPurchase or requestSubscription")
         }
@@ -1755,10 +1821,12 @@ public data class RequestPurchaseProps(
         is Request.Purchase -> mapOf(
             "requestPurchase" to request.value.toJson(),
             "type" to type.toJson(),
+            "useAlternativeBilling" to useAlternativeBilling,
         )
         is Request.Subscription -> mapOf(
             "requestSubscription" to request.value.toJson(),
             "type" to type.toJson(),
+            "useAlternativeBilling" to useAlternativeBilling,
         )
     }
 
@@ -1851,6 +1919,10 @@ public data class RequestSubscriptionAndroidProps(
 public data class RequestSubscriptionIosProps(
     val andDangerouslyFinishTransactionAutomatically: Boolean? = null,
     val appAccountToken: String? = null,
+    /**
+     * External purchase URL for alternative billing (iOS)
+     */
+    val externalPurchaseUrl: String? = null,
     val quantity: Int? = null,
     val sku: String,
     val withOffer: DiscountOfferInputIOS? = null
@@ -1860,6 +1932,7 @@ public data class RequestSubscriptionIosProps(
             return RequestSubscriptionIosProps(
                 andDangerouslyFinishTransactionAutomatically = json["andDangerouslyFinishTransactionAutomatically"] as Boolean?,
                 appAccountToken = json["appAccountToken"] as String?,
+                externalPurchaseUrl = json["externalPurchaseUrl"] as String?,
                 quantity = (json["quantity"] as Number?)?.toInt(),
                 sku = json["sku"] as String,
                 withOffer = (json["withOffer"] as Map<String, Any?>?)?.let { DiscountOfferInputIOS.fromJson(it) },
@@ -1870,6 +1943,7 @@ public data class RequestSubscriptionIosProps(
     fun toJson(): Map<String, Any?> = mapOf(
         "andDangerouslyFinishTransactionAutomatically" to andDangerouslyFinishTransactionAutomatically,
         "appAccountToken" to appAccountToken,
+        "externalPurchaseUrl" to externalPurchaseUrl,
         "quantity" to quantity,
         "sku" to sku,
         "withOffer" to withOffer?.toJson(),
@@ -1974,6 +2048,14 @@ public interface MutationResolver {
      */
     suspend fun beginRefundRequestIOS(sku: String): String?
     /**
+     * Check if alternative billing is available for this user/device
+     * Step 1 of alternative billing flow
+     * 
+     * Returns true if available, false otherwise
+     * Throws OpenIapError.NotPrepared if billing client not ready
+     */
+    suspend fun checkAlternativeBillingAvailabilityAndroid(): Boolean
+    /**
      * Clear pending transactions from the StoreKit payment queue
      */
     suspend fun clearTransactionIOS(): Boolean
@@ -1981,6 +2063,16 @@ public interface MutationResolver {
      * Consume a purchase token so it can be repurchased
      */
     suspend fun consumePurchaseAndroid(purchaseToken: String): Boolean
+    /**
+     * Create external transaction token for Google Play reporting
+     * Step 3 of alternative billing flow
+     * Must be called AFTER successful payment in your payment system
+     * Token must be reported to Google Play backend within 24 hours
+     * 
+     * Returns token string, or null if creation failed
+     * Throws OpenIapError.NotPrepared if billing client not ready
+     */
+    suspend fun createAlternativeBillingTokenAndroid(): String?
     /**
      * Open the native subscription management surface
      */
@@ -1996,7 +2088,7 @@ public interface MutationResolver {
     /**
      * Establish the platform billing connection
      */
-    suspend fun initConnection(): Boolean
+    suspend fun initConnection(config: InitConnectionConfig? = null): Boolean
     /**
      * Present the App Store code redemption sheet
      */
@@ -2013,6 +2105,15 @@ public interface MutationResolver {
      * Restore completed purchases across platforms
      */
     suspend fun restorePurchases(): Unit
+    /**
+     * Show alternative billing information dialog to user
+     * Step 2 of alternative billing flow
+     * Must be called BEFORE processing payment in your payment system
+     * 
+     * Returns true if user accepted, false if user canceled
+     * Throws OpenIapError.NotPrepared if billing client not ready
+     */
+    suspend fun showAlternativeBillingDialogAndroid(): Boolean
     /**
      * Open subscription management UI and return changed purchases (iOS 15+)
      */
@@ -2125,16 +2226,19 @@ public interface SubscriptionResolver {
 
 public typealias MutationAcknowledgePurchaseAndroidHandler = suspend (purchaseToken: String) -> Boolean
 public typealias MutationBeginRefundRequestIOSHandler = suspend (sku: String) -> String?
+public typealias MutationCheckAlternativeBillingAvailabilityAndroidHandler = suspend () -> Boolean
 public typealias MutationClearTransactionIOSHandler = suspend () -> Boolean
 public typealias MutationConsumePurchaseAndroidHandler = suspend (purchaseToken: String) -> Boolean
+public typealias MutationCreateAlternativeBillingTokenAndroidHandler = suspend () -> String?
 public typealias MutationDeepLinkToSubscriptionsHandler = suspend (options: DeepLinkOptions?) -> Unit
 public typealias MutationEndConnectionHandler = suspend () -> Boolean
 public typealias MutationFinishTransactionHandler = suspend (purchase: PurchaseInput, isConsumable: Boolean?) -> Unit
-public typealias MutationInitConnectionHandler = suspend () -> Boolean
+public typealias MutationInitConnectionHandler = suspend (config: InitConnectionConfig?) -> Boolean
 public typealias MutationPresentCodeRedemptionSheetIOSHandler = suspend () -> Boolean
 public typealias MutationRequestPurchaseHandler = suspend (params: RequestPurchaseProps) -> RequestPurchaseResult?
 public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = suspend () -> Boolean
 public typealias MutationRestorePurchasesHandler = suspend () -> Unit
+public typealias MutationShowAlternativeBillingDialogAndroidHandler = suspend () -> Boolean
 public typealias MutationShowManageSubscriptionsIOSHandler = suspend () -> List<PurchaseIOS>
 public typealias MutationSyncIOSHandler = suspend () -> Boolean
 public typealias MutationValidateReceiptHandler = suspend (options: ReceiptValidationProps) -> ReceiptValidationResult
@@ -2142,8 +2246,10 @@ public typealias MutationValidateReceiptHandler = suspend (options: ReceiptValid
 public data class MutationHandlers(
     val acknowledgePurchaseAndroid: MutationAcknowledgePurchaseAndroidHandler? = null,
     val beginRefundRequestIOS: MutationBeginRefundRequestIOSHandler? = null,
+    val checkAlternativeBillingAvailabilityAndroid: MutationCheckAlternativeBillingAvailabilityAndroidHandler? = null,
     val clearTransactionIOS: MutationClearTransactionIOSHandler? = null,
     val consumePurchaseAndroid: MutationConsumePurchaseAndroidHandler? = null,
+    val createAlternativeBillingTokenAndroid: MutationCreateAlternativeBillingTokenAndroidHandler? = null,
     val deepLinkToSubscriptions: MutationDeepLinkToSubscriptionsHandler? = null,
     val endConnection: MutationEndConnectionHandler? = null,
     val finishTransaction: MutationFinishTransactionHandler? = null,
@@ -2152,6 +2258,7 @@ public data class MutationHandlers(
     val requestPurchase: MutationRequestPurchaseHandler? = null,
     val requestPurchaseOnPromotedProductIOS: MutationRequestPurchaseOnPromotedProductIOSHandler? = null,
     val restorePurchases: MutationRestorePurchasesHandler? = null,
+    val showAlternativeBillingDialogAndroid: MutationShowAlternativeBillingDialogAndroidHandler? = null,
     val showManageSubscriptionsIOS: MutationShowManageSubscriptionsIOSHandler? = null,
     val syncIOS: MutationSyncIOSHandler? = null,
     val validateReceipt: MutationValidateReceiptHandler? = null

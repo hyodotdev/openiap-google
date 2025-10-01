@@ -66,13 +66,40 @@ import kotlin.coroutines.resume
 import java.lang.ref.WeakReference
 
 /**
- * Main OpenIapModule implementation for Android
+ * Alternative billing mode
  */
-class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
+enum class AlternativeBillingMode {
+    /** Standard Google Play billing (default) */
+    NONE,
+    /** Alternative billing with user choice (user selects between Google Play or alternative) */
+    USER_CHOICE,
+    /** Alternative billing only (no Google Play option) */
+    ALTERNATIVE_ONLY
+}
+
+/**
+ * Main OpenIapModule implementation for Android
+ *
+ * @param context Android context
+ * @param alternativeBillingMode Alternative billing mode (default: NONE)
+ * @param userChoiceBillingListener Listener for user choice billing selection (optional)
+ */
+class OpenIapModule(
+    private val context: Context,
+    private var alternativeBillingMode: AlternativeBillingMode = AlternativeBillingMode.NONE,
+    private var userChoiceBillingListener: dev.hyo.openiap.listener.UserChoiceBillingListener? = null
+) : PurchasesUpdatedListener {
 
     companion object {
         private const val TAG = "OpenIapModule"
     }
+
+    // For backward compatibility
+    constructor(context: Context, enableAlternativeBilling: Boolean) : this(
+        context,
+        if (enableAlternativeBilling) AlternativeBillingMode.ALTERNATIVE_ONLY else AlternativeBillingMode.NONE,
+        null
+    )
 
     private var billingClient: BillingClient? = null
     private var currentActivityRef: WeakReference<Activity>? = null
@@ -84,7 +111,18 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
     private val purchaseErrorListeners = mutableSetOf<OpenIapPurchaseErrorListener>()
     private var currentPurchaseCallback: ((Result<List<Purchase>>) -> Unit)? = null
 
-    val initConnection: MutationInitConnectionHandler = {
+    val initConnection: MutationInitConnectionHandler = { config ->
+        // Update alternativeBillingMode if provided in config
+        config?.alternativeBillingModeAndroid?.let { modeAndroid ->
+            OpenIapLog.d("Setting alternative billing mode from config: $modeAndroid", TAG)
+            // Map AlternativeBillingModeAndroid to AlternativeBillingMode
+            alternativeBillingMode = when (modeAndroid) {
+                AlternativeBillingModeAndroid.None -> AlternativeBillingMode.NONE
+                AlternativeBillingModeAndroid.UserChoice -> AlternativeBillingMode.USER_CHOICE
+                AlternativeBillingModeAndroid.AlternativeOnly -> AlternativeBillingMode.ALTERNATIVE_ONLY
+            }
+        }
+
         withContext(Dispatchers.IO) {
             suspendCancellableCoroutine<Boolean> { continuation ->
                 initBillingClient(
@@ -191,8 +229,254 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
         getActiveSubscriptions(subscriptionIds).isNotEmpty()
     }
 
+    /**
+     * Check if alternative billing is available for this user/device
+     * Step 1 of alternative billing flow
+     */
+    suspend fun checkAlternativeBillingAvailability(): Boolean = withContext(Dispatchers.IO) {
+        val client = billingClient ?: throw OpenIapError.NotPrepared
+        if (!client.isReady) throw OpenIapError.NotPrepared
+
+        OpenIapLog.d("Checking alternative billing availability...", TAG)
+        val checkAvailabilityMethod = client.javaClass.getMethod(
+            "isAlternativeBillingOnlyAvailableAsync",
+            com.android.billingclient.api.AlternativeBillingOnlyAvailabilityListener::class.java
+        )
+
+        suspendCancellableCoroutine { continuation ->
+            val listenerClass = Class.forName("com.android.billingclient.api.AlternativeBillingOnlyAvailabilityListener")
+            val availabilityListener = java.lang.reflect.Proxy.newProxyInstance(
+                listenerClass.classLoader,
+                arrayOf(listenerClass)
+            ) { _, method, args ->
+                if (method.name == "onAlternativeBillingOnlyAvailabilityResponse") {
+                    val result = args?.get(0) as? BillingResult
+                    OpenIapLog.d("Availability check result: ${result?.responseCode} - ${result?.debugMessage}", TAG)
+
+                    if (result?.responseCode == BillingClient.BillingResponseCode.OK) {
+                        OpenIapLog.d("✓ Alternative billing is available", TAG)
+                        if (continuation.isActive) continuation.resume(true)
+                    } else {
+                        OpenIapLog.e("✗ Alternative billing not available: ${result?.debugMessage}", tag = TAG)
+                        if (continuation.isActive) continuation.resume(false)
+                    }
+                }
+                null
+            }
+            checkAvailabilityMethod.invoke(client, availabilityListener)
+        }
+    }
+
+    /**
+     * Show alternative billing information dialog to user
+     * Step 2 of alternative billing flow
+     * Must be called BEFORE processing payment
+     */
+    suspend fun showAlternativeBillingInformationDialog(activity: Activity): Boolean = withContext(Dispatchers.IO) {
+        val client = billingClient ?: throw OpenIapError.NotPrepared
+        if (!client.isReady) throw OpenIapError.NotPrepared
+
+        OpenIapLog.d("Showing alternative billing information dialog...", TAG)
+        val showDialogMethod = client.javaClass.getMethod(
+            "showAlternativeBillingOnlyInformationDialog",
+            android.app.Activity::class.java,
+            com.android.billingclient.api.AlternativeBillingOnlyInformationDialogListener::class.java
+        )
+
+        val dialogResult = suspendCancellableCoroutine<BillingResult> { continuation ->
+            val listenerClass = Class.forName("com.android.billingclient.api.AlternativeBillingOnlyInformationDialogListener")
+            val dialogListener = java.lang.reflect.Proxy.newProxyInstance(
+                listenerClass.classLoader,
+                arrayOf(listenerClass)
+            ) { _, method, args ->
+                if (method.name == "onAlternativeBillingOnlyInformationDialogResponse") {
+                    val result = args?.get(0) as? BillingResult
+                    OpenIapLog.d("Dialog result: ${result?.responseCode} - ${result?.debugMessage}", TAG)
+                    if (continuation.isActive && result != null) {
+                        continuation.resume(result)
+                    }
+                }
+                null
+            }
+            showDialogMethod.invoke(client, activity, dialogListener)
+        }
+
+        when (dialogResult.responseCode) {
+            BillingClient.BillingResponseCode.OK -> true
+            BillingClient.BillingResponseCode.USER_CANCELED -> {
+                OpenIapLog.d("User canceled information dialog", TAG)
+                false
+            }
+            else -> {
+                OpenIapLog.e("Information dialog failed: ${dialogResult.debugMessage}", tag = TAG)
+                false
+            }
+        }
+    }
+
+    /**
+     * Create external transaction token for alternative billing
+     * Step 3 of alternative billing flow
+     * Must be called AFTER successful payment in your payment system
+     * Token must be reported to Google Play backend within 24 hours
+     */
+    suspend fun createAlternativeBillingReportingToken(): String? = withContext(Dispatchers.IO) {
+        val client = billingClient ?: throw OpenIapError.NotPrepared
+        if (!client.isReady) throw OpenIapError.NotPrepared
+
+        OpenIapLog.d("Creating alternative billing reporting token...", TAG)
+        val createTokenMethod = client.javaClass.getMethod(
+            "createAlternativeBillingOnlyReportingDetailsAsync",
+            com.android.billingclient.api.AlternativeBillingOnlyReportingDetailsListener::class.java
+        )
+
+        suspendCancellableCoroutine { continuation ->
+            val listenerClass = Class.forName("com.android.billingclient.api.AlternativeBillingOnlyReportingDetailsListener")
+            val tokenListener = java.lang.reflect.Proxy.newProxyInstance(
+                listenerClass.classLoader,
+                arrayOf(listenerClass)
+            ) { _, method, args ->
+                if (method.name == "onAlternativeBillingOnlyTokenResponse") {
+                    val result = args?.get(0) as? BillingResult
+                    val details = args?.getOrNull(1)
+
+                    if (result?.responseCode == BillingClient.BillingResponseCode.OK && details != null) {
+                        try {
+                            val tokenMethod = details.javaClass.getMethod("getExternalTransactionToken")
+                            val token = tokenMethod.invoke(details) as? String
+                            OpenIapLog.d("✓ External transaction token created: $token", TAG)
+                            if (continuation.isActive) continuation.resume(token)
+                        } catch (e: Exception) {
+                            OpenIapLog.e("Failed to extract token: ${e.message}", e, TAG)
+                            if (continuation.isActive) continuation.resume(null)
+                        }
+                    } else {
+                        OpenIapLog.e("Token creation failed: ${result?.debugMessage}", tag = TAG)
+                        if (continuation.isActive) continuation.resume(null)
+                    }
+                }
+                null
+            }
+            createTokenMethod.invoke(client, tokenListener)
+        }
+    }
+
     val requestPurchase: MutationRequestPurchaseHandler = { props ->
         val purchases = withContext(Dispatchers.IO) {
+            // ALTERNATIVE_ONLY mode: Show information dialog and create token
+            if (alternativeBillingMode == AlternativeBillingMode.ALTERNATIVE_ONLY) {
+                OpenIapLog.d("=== ALTERNATIVE BILLING ONLY MODE ===", TAG)
+
+                val client = billingClient
+                if (client == null || !client.isReady) {
+                    val err = OpenIapError.NotPrepared
+                    purchaseErrorListeners.forEach { listener -> runCatching { listener.onPurchaseError(err) } }
+                    return@withContext emptyList()
+                }
+
+                val activity = currentActivityRef?.get() ?: fallbackActivity
+                if (activity == null) {
+                    val err = OpenIapError.MissingCurrentActivity
+                    purchaseErrorListeners.forEach { listener -> runCatching { listener.onPurchaseError(err) } }
+                    return@withContext emptyList()
+                }
+
+                try {
+                    // Step 1: Check if alternative billing is available
+                    val isAvailable = checkAlternativeBillingAvailability()
+                    if (!isAvailable) {
+                        OpenIapLog.e("Alternative billing is not available for this user/app", tag = TAG)
+
+                        // Create detailed error for UI
+                        val err = OpenIapError.AlternativeBillingUnavailable(
+                            "Alternative Billing Unavailable\n\n" +
+                            "Possible causes:\n" +
+                            "1. User is not in an eligible country\n" +
+                            "2. App not enrolled in Alternative Billing program\n" +
+                            "3. Play Console setup incomplete\n\n" +
+                            "To enable Alternative Billing:\n" +
+                            "• Enroll app in Google Play Console\n" +
+                            "• Wait for Google approval\n" +
+                            "• Test with license tester accounts\n\n" +
+                            "Current mode: ALTERNATIVE_ONLY\n" +
+                            "Library: Billing 8.0.0"
+                        )
+
+                        purchaseErrorListeners.forEach { listener -> runCatching { listener.onPurchaseError(err) } }
+                        return@withContext emptyList()
+                    }
+
+                    // Step 2: Show alternative billing information dialog
+                    val dialogSuccess = showAlternativeBillingInformationDialog(activity)
+                    if (!dialogSuccess) {
+                        val err = OpenIapError.UserCancelled
+                        purchaseErrorListeners.forEach { listener -> runCatching { listener.onPurchaseError(err) } }
+                        return@withContext emptyList()
+                    }
+
+                    // Step 3: Create external transaction token
+                    // ============================================================
+                    // ⚠️ PRODUCTION IMPLEMENTATION REQUIRED
+                    // ============================================================
+                    // In production, this step should happen AFTER successful payment:
+                    // 1. Dialog shown (✓ done above)
+                    // 2. Process payment through YOUR payment system
+                    // 3. After payment success, call: createAlternativeBillingReportingToken()
+                    // 4. Send token to backend → report to Play within 24h
+                    //
+                    // For manual control, use the separate functions:
+                    // - checkAlternativeBillingAvailability()
+                    // - showAlternativeBillingInformationDialog(activity)
+                    // - YOUR_PAYMENT_SYSTEM.processPayment()
+                    // - createAlternativeBillingReportingToken()
+                    // ============================================================
+                    val tokenResult = createAlternativeBillingReportingToken()
+
+                    if (tokenResult != null) {
+                        OpenIapLog.d("✓ Alternative billing token created: $tokenResult", TAG)
+                        OpenIapLog.d("", TAG)
+                        OpenIapLog.d("============================================================", TAG)
+                        OpenIapLog.d("NEXT STEPS (PRODUCTION IMPLEMENTATION REQUIRED)", TAG)
+                        OpenIapLog.d("============================================================", TAG)
+                        OpenIapLog.d("This token must be used to report the transaction to Google Play.", TAG)
+                        OpenIapLog.d("", TAG)
+                        OpenIapLog.d("Required implementation:", TAG)
+                        OpenIapLog.d("1. Process payment through YOUR alternative payment system", TAG)
+                        OpenIapLog.d("2. After successful payment, send this token to your backend:", TAG)
+                        OpenIapLog.d("   Token: $tokenResult", TAG)
+                        OpenIapLog.d("3. Backend reports to Google Play Developer API within 24 hours:", TAG)
+                        OpenIapLog.d("   POST https://androidpublisher.googleapis.com/androidpublisher/v3/", TAG)
+                        OpenIapLog.d("        applications/{packageName}/externalTransactions", TAG)
+                        OpenIapLog.d("   Body: { externalTransactionToken: \"$tokenResult\", ... }", TAG)
+                        OpenIapLog.d("", TAG)
+                        OpenIapLog.d("See: https://developer.android.com/google/play/billing/alternative/reporting", TAG)
+                        OpenIapLog.d("============================================================", TAG)
+                        OpenIapLog.d("=== END ALTERNATIVE BILLING ONLY MODE ===", TAG)
+
+                        // TODO: In production, emit this token via callback for payment processing
+                        // alternativeBillingCallback?.onTokenCreated(
+                        //     token = tokenResult,
+                        //     productId = props.skus.first(),
+                        //     onPaymentComplete = { transactionId ->
+                        //         // App reports to backend after payment success
+                        //     }
+                        // )
+
+                        // Return empty list - app should handle purchase via alternative billing
+                        return@withContext emptyList()
+                    } else {
+                        val err = OpenIapError.PurchaseFailed
+                        purchaseErrorListeners.forEach { listener -> runCatching { listener.onPurchaseError(err) } }
+                        return@withContext emptyList()
+                    }
+                } catch (e: Exception) {
+                    OpenIapLog.e("Alternative billing only flow failed: ${e.message}", e, TAG)
+                    val err = OpenIapError.FeatureNotSupported
+                    purchaseErrorListeners.forEach { listener -> runCatching { listener.onPurchaseError(err) } }
+                    return@withContext emptyList()
+                }
+            }
+
             val androidArgs = props.toAndroidPurchaseArgs()
             val activity = currentActivityRef?.get() ?: fallbackActivity
 
@@ -281,6 +565,22 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
                         .setIsOfferPersonalized(androidArgs.isOfferPersonalized == true)
 
                     androidArgs.obfuscatedAccountId?.let { flowBuilder.setObfuscatedAccountId(it) }
+
+                    // Note: Alternative billing must be configured at BillingClient initialization
+                    // via BillingClient.newBuilder(context).enableAlternativeBillingOnly() or
+                    // enableUserChoiceBilling(). The useAlternativeBilling flag is currently
+                    // informational only and requires proper BillingClient setup.
+                    if (androidArgs.useAlternativeBilling == true) {
+                        OpenIapLog.d("=== PURCHASE WITH ALTERNATIVE BILLING ===", TAG)
+                        OpenIapLog.d("useAlternativeBilling flag: true", TAG)
+                        OpenIapLog.d("Products: ${androidArgs.skus}", TAG)
+                        OpenIapLog.d("Note: Alternative billing was configured during BillingClient initialization", TAG)
+                        OpenIapLog.d("If alternative billing is not working, check:", TAG)
+                        OpenIapLog.d("1. Google Play Console alternative billing setup", TAG)
+                        OpenIapLog.d("2. App enrollment in alternative billing program", TAG)
+                        OpenIapLog.d("3. Billing Library version (6.2+ required)", TAG)
+                        OpenIapLog.d("==========================================", TAG)
+                    }
 
                     // For subscription upgrades/downgrades, purchaseToken and obfuscatedProfileId are mutually exclusive
                     if (androidArgs.type == ProductQueryType.Subs && !androidArgs.purchaseTokenAndroid.isNullOrBlank()) {
@@ -583,7 +883,10 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
     }
 
     private fun buildBillingClient() {
-        billingClient = BillingClient.newBuilder(context)
+        OpenIapLog.d("=== buildBillingClient START ===", TAG)
+        OpenIapLog.d("alternativeBillingMode: $alternativeBillingMode", TAG)
+
+        val builder = BillingClient.newBuilder(context)
             .setListener(this)
             .enablePendingPurchases(
                 PendingPurchasesParams.newBuilder()
@@ -591,7 +894,105 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
                     .build()
             )
             .enableAutoServiceReconnection()
-            .build()
+
+        // Enable alternative billing if requested
+        // This requires proper Google Play Console configuration
+        when (alternativeBillingMode) {
+            AlternativeBillingMode.NONE -> {
+                OpenIapLog.d("Standard Google Play billing mode", TAG)
+            }
+            AlternativeBillingMode.USER_CHOICE -> {
+                OpenIapLog.d("=== USER CHOICE BILLING INITIALIZATION ===", TAG)
+                try {
+                    // Try to use UserChoiceBillingListener via reflection for compatibility
+                    val listenerClass = Class.forName("com.android.billingclient.api.UserChoiceBillingListener")
+                    val userChoiceListener = java.lang.reflect.Proxy.newProxyInstance(
+                        listenerClass.classLoader,
+                        arrayOf(listenerClass)
+                    ) { _, method, args ->
+                        if (method.name == "userSelectedAlternativeBilling") {
+                            OpenIapLog.d("=== USER SELECTED ALTERNATIVE BILLING ===", TAG)
+                            val userChoiceDetails = args?.get(0)
+                            OpenIapLog.d("UserChoiceDetails: $userChoiceDetails", TAG)
+
+                            // Extract external transaction token and products
+                            try {
+                                val detailsClass = userChoiceDetails?.javaClass
+                                val tokenMethod = detailsClass?.getMethod("getExternalTransactionToken")
+                                val productsMethod = detailsClass?.getMethod("getProducts")
+
+                                val externalToken = tokenMethod?.invoke(userChoiceDetails) as? String
+                                val products = productsMethod?.invoke(userChoiceDetails) as? List<*>
+
+                                if (externalToken != null && products != null) {
+                                    val productIds = products.mapNotNull { it?.toString() }
+                                    OpenIapLog.d("External transaction token: $externalToken", TAG)
+                                    OpenIapLog.d("Products: $productIds", TAG)
+
+                                    // Call user's listener
+                                    val details = dev.hyo.openiap.listener.UserChoiceDetails(
+                                        externalTransactionToken = externalToken,
+                                        products = productIds
+                                    )
+                                    userChoiceBillingListener?.onUserSelectedAlternativeBilling(details)
+                                } else {
+                                    OpenIapLog.w("Failed to extract user choice details", TAG)
+                                }
+                            } catch (e: Exception) {
+                                OpenIapLog.w("Error processing user choice details: ${e.message}", TAG)
+                                e.printStackTrace()
+                            }
+                            OpenIapLog.d("==========================================", TAG)
+                        }
+                        null
+                    }
+
+                    val enableMethod = builder.javaClass.getMethod("enableUserChoiceBilling", listenerClass)
+                    enableMethod.invoke(builder, userChoiceListener)
+                    OpenIapLog.d("✓ User choice billing enabled successfully", TAG)
+                    if (userChoiceBillingListener != null) {
+                        OpenIapLog.d("✓ UserChoiceBillingListener registered", TAG)
+                    } else {
+                        OpenIapLog.w("⚠ No UserChoiceBillingListener provided", TAG)
+                    }
+                } catch (e: Exception) {
+                    OpenIapLog.w("✗ Failed to enable user choice billing: ${e.javaClass.simpleName}: ${e.message}", TAG)
+                    OpenIapLog.w("User choice billing requires Billing Library 7.0+ and Google Play Console setup", TAG)
+                }
+                OpenIapLog.d("=== END USER CHOICE BILLING INITIALIZATION ===", TAG)
+            }
+            AlternativeBillingMode.ALTERNATIVE_ONLY -> {
+                OpenIapLog.d("=== ALTERNATIVE BILLING ONLY INITIALIZATION ===", TAG)
+
+                // List all available methods on BillingClient.Builder
+                try {
+                    val allMethods = builder.javaClass.methods.map { it.name }.sorted()
+                    OpenIapLog.d("All BillingClient.Builder methods: $allMethods", TAG)
+                } catch (e: Exception) {
+                    OpenIapLog.w("Could not list methods: ${e.message}", TAG)
+                }
+
+                try {
+                    // For Billing Library 6.2+, try enableAlternativeBillingOnly()
+                    OpenIapLog.d("Attempting to call enableAlternativeBillingOnly()...", TAG)
+                    val method = builder.javaClass.getMethod("enableAlternativeBillingOnly")
+                    OpenIapLog.d("Method found: $method", TAG)
+                    method.invoke(builder)  // Returns void, mutates builder
+                    OpenIapLog.d("✓ Alternative billing only enabled successfully", TAG)
+                } catch (e: NoSuchMethodException) {
+                    OpenIapLog.e("✗ enableAlternativeBillingOnly() method not found", e, TAG)
+                    OpenIapLog.e("This method requires Billing Library 6.2+", tag = TAG)
+                    OpenIapLog.e("Current library version: 8.0.0", tag = TAG)
+                    OpenIapLog.e("Alternative billing will NOT work - standard Google Play billing will be used", tag = TAG)
+                } catch (e: Exception) {
+                    OpenIapLog.e("✗ Failed to enable alternative billing only: ${e.javaClass.simpleName}: ${e.message}", e, TAG)
+                }
+                OpenIapLog.d("=== END ALTERNATIVE BILLING ONLY INITIALIZATION ===", TAG)
+            }
+        }
+
+        billingClient = builder.build()
+        OpenIapLog.d("=== buildBillingClient END ===", TAG)
     }
 
     private fun initBillingClient(
@@ -628,5 +1029,14 @@ class OpenIapModule(private val context: Context) : PurchasesUpdatedListener {
 
     fun setActivity(activity: Activity?) {
         currentActivityRef = activity?.let { WeakReference(it) }
+    }
+
+    /**
+     * Set user choice billing listener
+     *
+     * @param listener User choice billing listener
+     */
+    fun setUserChoiceBillingListener(listener: dev.hyo.openiap.listener.UserChoiceBillingListener?) {
+        userChoiceBillingListener = listener
     }
 }
