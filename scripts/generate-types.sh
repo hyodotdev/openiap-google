@@ -161,6 +161,7 @@ product_props = {
 }
 
 purchase_props = {
+    "currentPlanId",
     "id",
     "ids",
     "isAutoRenewing",
