@@ -368,6 +368,13 @@ public interface ProductCommon {
 }
 
 public interface PurchaseCommon {
+    /**
+     * The current plan identifier. This is:
+     * - On Android: the basePlanId (e.g., "premium", "premium-year")
+     * - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+     * This provides a unified way to identify which specific plan/tier the user is subscribed to.
+     */
+    val currentPlanId: String?
     val id: String
     val ids: List<String>?
     val isAutoRenewing: Boolean
@@ -386,12 +393,24 @@ public interface PurchaseCommon {
 
 public data class ActiveSubscription(
     val autoRenewingAndroid: Boolean? = null,
+    val basePlanIdAndroid: String? = null,
+    /**
+     * The current plan identifier. This is:
+     * - On Android: the basePlanId (e.g., "premium", "premium-year")
+     * - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+     * This provides a unified way to identify which specific plan/tier the user is subscribed to.
+     */
+    val currentPlanId: String? = null,
     val daysUntilExpirationIOS: Double? = null,
     val environmentIOS: String? = null,
     val expirationDateIOS: Double? = null,
     val isActive: Boolean,
     val productId: String,
     val purchaseToken: String? = null,
+    /**
+     * Required for subscription upgrade/downgrade on Android
+     */
+    val purchaseTokenAndroid: String? = null,
     val transactionDate: Double,
     val transactionId: String,
     val willExpireSoon: Boolean? = null
@@ -401,12 +420,15 @@ public data class ActiveSubscription(
         fun fromJson(json: Map<String, Any?>): ActiveSubscription {
             return ActiveSubscription(
                 autoRenewingAndroid = json["autoRenewingAndroid"] as Boolean?,
+                basePlanIdAndroid = json["basePlanIdAndroid"] as String?,
+                currentPlanId = json["currentPlanId"] as String?,
                 daysUntilExpirationIOS = (json["daysUntilExpirationIOS"] as Number?)?.toDouble(),
                 environmentIOS = json["environmentIOS"] as String?,
                 expirationDateIOS = (json["expirationDateIOS"] as Number?)?.toDouble(),
                 isActive = json["isActive"] as Boolean,
                 productId = json["productId"] as String,
                 purchaseToken = json["purchaseToken"] as String?,
+                purchaseTokenAndroid = json["purchaseTokenAndroid"] as String?,
                 transactionDate = (json["transactionDate"] as Number).toDouble(),
                 transactionId = json["transactionId"] as String,
                 willExpireSoon = json["willExpireSoon"] as Boolean?,
@@ -417,12 +439,15 @@ public data class ActiveSubscription(
     fun toJson(): Map<String, Any?> = mapOf(
         "__typename" to "ActiveSubscription",
         "autoRenewingAndroid" to autoRenewingAndroid,
+        "basePlanIdAndroid" to basePlanIdAndroid,
+        "currentPlanId" to currentPlanId,
         "daysUntilExpirationIOS" to daysUntilExpirationIOS,
         "environmentIOS" to environmentIOS,
         "expirationDateIOS" to expirationDateIOS,
         "isActive" to isActive,
         "productId" to productId,
         "purchaseToken" to purchaseToken,
+        "purchaseTokenAndroid" to purchaseTokenAndroid,
         "transactionDate" to transactionDate,
         "transactionId" to transactionId,
         "willExpireSoon" to willExpireSoon,
@@ -956,6 +981,7 @@ public data class ProductSubscriptionIOS(
 
 public data class PurchaseAndroid(
     val autoRenewingAndroid: Boolean? = null,
+    override val currentPlanId: String? = null,
     val dataAndroid: String? = null,
     val developerPayloadAndroid: String? = null,
     override val id: String,
@@ -979,6 +1005,7 @@ public data class PurchaseAndroid(
         fun fromJson(json: Map<String, Any?>): PurchaseAndroid {
             return PurchaseAndroid(
                 autoRenewingAndroid = json["autoRenewingAndroid"] as Boolean?,
+                currentPlanId = json["currentPlanId"] as String?,
                 dataAndroid = json["dataAndroid"] as String?,
                 developerPayloadAndroid = json["developerPayloadAndroid"] as String?,
                 id = json["id"] as String,
@@ -1003,6 +1030,7 @@ public data class PurchaseAndroid(
     override fun toJson(): Map<String, Any?> = mapOf(
         "__typename" to "PurchaseAndroid",
         "autoRenewingAndroid" to autoRenewingAndroid,
+        "currentPlanId" to currentPlanId,
         "dataAndroid" to dataAndroid,
         "developerPayloadAndroid" to developerPayloadAndroid,
         "id" to id,
@@ -1053,6 +1081,7 @@ public data class PurchaseIOS(
     val countryCodeIOS: String? = null,
     val currencyCodeIOS: String? = null,
     val currencySymbolIOS: String? = null,
+    override val currentPlanId: String? = null,
     val environmentIOS: String? = null,
     val expirationDateIOS: Double? = null,
     override val id: String,
@@ -1089,6 +1118,7 @@ public data class PurchaseIOS(
                 countryCodeIOS = json["countryCodeIOS"] as String?,
                 currencyCodeIOS = json["currencyCodeIOS"] as String?,
                 currencySymbolIOS = json["currencySymbolIOS"] as String?,
+                currentPlanId = json["currentPlanId"] as String?,
                 environmentIOS = json["environmentIOS"] as String?,
                 expirationDateIOS = (json["expirationDateIOS"] as Number?)?.toDouble(),
                 id = json["id"] as String,
@@ -1126,6 +1156,7 @@ public data class PurchaseIOS(
         "countryCodeIOS" to countryCodeIOS,
         "currencyCodeIOS" to currencyCodeIOS,
         "currencySymbolIOS" to currencySymbolIOS,
+        "currentPlanId" to currentPlanId,
         "environmentIOS" to environmentIOS,
         "expirationDateIOS" to expirationDateIOS,
         "id" to id,
@@ -1582,45 +1613,7 @@ public data class ProductRequest(
     )
 }
 
-public data class PurchaseInput(
-    val id: String,
-    val ids: List<String>? = null,
-    val isAutoRenewing: Boolean,
-    val platform: IapPlatform,
-    val productId: String,
-    val purchaseState: PurchaseState,
-    val purchaseToken: String? = null,
-    val quantity: Int,
-    val transactionDate: Double
-) {
-    companion object {
-        fun fromJson(json: Map<String, Any?>): PurchaseInput {
-            return PurchaseInput(
-                id = json["id"] as String,
-                ids = (json["ids"] as List<*>?)?.map { it as String },
-                isAutoRenewing = json["isAutoRenewing"] as Boolean,
-                platform = IapPlatform.fromJson(json["platform"] as String),
-                productId = json["productId"] as String,
-                purchaseState = PurchaseState.fromJson(json["purchaseState"] as String),
-                purchaseToken = json["purchaseToken"] as String?,
-                quantity = (json["quantity"] as Number).toInt(),
-                transactionDate = (json["transactionDate"] as Number).toDouble(),
-            )
-        }
-    }
-
-    fun toJson(): Map<String, Any?> = mapOf(
-        "id" to id,
-        "ids" to ids?.map { it },
-        "isAutoRenewing" to isAutoRenewing,
-        "platform" to platform.toJson(),
-        "productId" to productId,
-        "purchaseState" to purchaseState.toJson(),
-        "purchaseToken" to purchaseToken,
-        "quantity" to quantity,
-        "transactionDate" to transactionDate,
-    )
-}
+public typealias PurchaseInput = Purchase
 
 public data class PurchaseOptions(
     /**

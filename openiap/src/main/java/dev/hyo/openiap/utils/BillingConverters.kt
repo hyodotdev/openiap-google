@@ -155,14 +155,4 @@ fun ProductSubscriptionAndroid.toProduct(): Product = ProductAndroid(
     type = type
 )
 
-fun Purchase.toPurchaseInput(): PurchaseInput = PurchaseInput(
-    id = id,
-    ids = ids,
-    isAutoRenewing = isAutoRenewing,
-    platform = platform,
-    productId = productId,
-    purchaseState = purchaseState,
-    purchaseToken = purchaseToken,
-    quantity = quantity,
-    transactionDate = transactionDate
-)
+fun Purchase.toPurchaseInput(): PurchaseInput = this
