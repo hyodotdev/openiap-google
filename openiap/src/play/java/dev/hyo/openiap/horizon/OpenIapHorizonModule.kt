@@ -102,4 +102,21 @@ class OpenIapHorizonModule(
     override fun removePurchaseErrorListener(listener: OpenIapPurchaseErrorListener) {
         delegate.removePurchaseErrorListener(listener)
     }
+
+    // Alternative Billing (delegate to OpenIapModule)
+    override suspend fun checkAlternativeBillingAvailability(): Boolean {
+        return delegate.checkAlternativeBillingAvailability()
+    }
+
+    override suspend fun showAlternativeBillingInformationDialog(activity: Activity): Boolean {
+        return delegate.showAlternativeBillingInformationDialog(activity)
+    }
+
+    override suspend fun createAlternativeBillingReportingToken(): String? {
+        return delegate.createAlternativeBillingReportingToken()
+    }
+
+    override fun setUserChoiceBillingListener(listener: dev.hyo.openiap.listener.UserChoiceBillingListener?) {
+        delegate.setUserChoiceBillingListener(listener)
+    }
 }

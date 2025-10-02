@@ -35,4 +35,10 @@ interface OpenIapProtocol {
     fun removePurchaseUpdateListener(listener: OpenIapPurchaseUpdateListener)
     fun addPurchaseErrorListener(listener: OpenIapPurchaseErrorListener)
     fun removePurchaseErrorListener(listener: OpenIapPurchaseErrorListener)
+
+    // Alternative Billing (Google Play only)
+    suspend fun checkAlternativeBillingAvailability(): Boolean
+    suspend fun showAlternativeBillingInformationDialog(activity: Activity): Boolean
+    suspend fun createAlternativeBillingReportingToken(): String?
+    fun setUserChoiceBillingListener(listener: dev.hyo.openiap.listener.UserChoiceBillingListener?)
 }

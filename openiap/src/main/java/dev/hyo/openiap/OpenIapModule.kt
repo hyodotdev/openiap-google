@@ -236,7 +236,7 @@ class OpenIapModule(
      * Check if alternative billing is available for this user/device
      * Step 1 of alternative billing flow
      */
-    suspend fun checkAlternativeBillingAvailability(): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun checkAlternativeBillingAvailability(): Boolean = withContext(Dispatchers.IO) {
         val client = billingClient ?: throw OpenIapError.NotPrepared
         if (!client.isReady) throw OpenIapError.NotPrepared
 
@@ -275,7 +275,7 @@ class OpenIapModule(
      * Step 2 of alternative billing flow
      * Must be called BEFORE processing payment
      */
-    suspend fun showAlternativeBillingInformationDialog(activity: Activity): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun showAlternativeBillingInformationDialog(activity: Activity): Boolean = withContext(Dispatchers.IO) {
         val client = billingClient ?: throw OpenIapError.NotPrepared
         if (!client.isReady) throw OpenIapError.NotPrepared
 
@@ -323,7 +323,7 @@ class OpenIapModule(
      * Must be called AFTER successful payment in your payment system
      * Token must be reported to Google Play backend within 24 hours
      */
-    suspend fun createAlternativeBillingReportingToken(): String? = withContext(Dispatchers.IO) {
+    override suspend fun createAlternativeBillingReportingToken(): String? = withContext(Dispatchers.IO) {
         val client = billingClient ?: throw OpenIapError.NotPrepared
         if (!client.isReady) throw OpenIapError.NotPrepared
 
@@ -1055,7 +1055,7 @@ class OpenIapModule(
      *
      * @param listener User choice billing listener
      */
-    fun setUserChoiceBillingListener(listener: dev.hyo.openiap.listener.UserChoiceBillingListener?) {
+    override fun setUserChoiceBillingListener(listener: dev.hyo.openiap.listener.UserChoiceBillingListener?) {
         userChoiceBillingListener = listener
     }
 }

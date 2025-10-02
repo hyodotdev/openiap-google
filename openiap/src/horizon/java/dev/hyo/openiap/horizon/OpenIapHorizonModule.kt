@@ -10,6 +10,7 @@ import com.meta.horizon.billingclient.api.BillingFlowParams
 import com.meta.horizon.billingclient.api.BillingResult
 import com.meta.horizon.billingclient.api.ConsumeParams
 import com.meta.horizon.billingclient.api.GetBillingConfigParams
+import com.meta.horizon.billingclient.api.PendingPurchasesParams
 import com.meta.horizon.billingclient.api.ProductDetails as HorizonProductDetails
 import com.meta.horizon.billingclient.api.Purchase as HorizonPurchase
 import com.meta.horizon.billingclient.api.PurchasesUpdatedListener
@@ -469,13 +470,34 @@ class OpenIapHorizonModule(
     }
 
     private fun buildBillingClient() {
+        val pendingPurchasesParams = com.meta.horizon.billingclient.api.PendingPurchasesParams.newBuilder()
+            .enableOneTimeProducts()
+            .build()
+
         val builder = BillingClient
             .newBuilder(context)
             .setListener(this)
-            .enablePendingPurchases()
+            .enablePendingPurchases(pendingPurchasesParams)
         if (!appId.isNullOrEmpty()) {
             builder.setAppId(appId)
         }
         billingClient = builder.build()
+    }
+
+    // Alternative Billing (Google Play only - not supported on Horizon)
+    override suspend fun checkAlternativeBillingAvailability(): Boolean {
+        throw OpenIapError.FeatureNotSupported
+    }
+
+    override suspend fun showAlternativeBillingInformationDialog(activity: Activity): Boolean {
+        throw OpenIapError.FeatureNotSupported
+    }
+
+    override suspend fun createAlternativeBillingReportingToken(): String? {
+        throw OpenIapError.FeatureNotSupported
+    }
+
+    override fun setUserChoiceBillingListener(listener: dev.hyo.openiap.listener.UserChoiceBillingListener?) {
+        // Not supported on Horizon
     }
 }
