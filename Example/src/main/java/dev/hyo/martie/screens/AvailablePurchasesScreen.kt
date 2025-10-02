@@ -218,18 +218,7 @@ fun AvailablePurchasesScreen(
                         onFinish = { isConsumable ->
                             scope.launch {
                                 try {
-                                    val purchaseInput = dev.hyo.openiap.PurchaseInput(
-                                        id = purchase.id,
-                                        ids = purchase.ids,
-                                        isAutoRenewing = purchase.isAutoRenewing,
-                                        platform = purchase.platform,
-                                        productId = purchase.productId,
-                                        purchaseState = purchase.purchaseState,
-                                        purchaseToken = purchase.purchaseToken,
-                                        quantity = purchase.quantity,
-                                        transactionDate = purchase.transactionDate
-                                    )
-                                    iapStore.finishTransaction(purchaseInput, isConsumable)
+                                    iapStore.finishTransaction(purchase, isConsumable)
                                     iapStore.postStatusMessage(
                                         message = "Transaction finished successfully",
                                         status = PurchaseResultStatus.Success,

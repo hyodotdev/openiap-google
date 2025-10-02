@@ -86,18 +86,7 @@ fun AlternativeBillingScreen(navController: NavController) {
                 val purchaseAndroid = purchase as? PurchaseAndroid
                 if (purchaseAndroid != null) {
                     android.util.Log.d("AlternativeBilling", "Auto-finishing transaction for testing")
-                    val purchaseInput = PurchaseInput(
-                        id = purchaseAndroid.id,
-                        ids = purchaseAndroid.ids,
-                        isAutoRenewing = purchaseAndroid.isAutoRenewing ?: false,
-                        platform = purchaseAndroid.platform,
-                        productId = purchaseAndroid.productId,
-                        purchaseState = purchaseAndroid.purchaseState,
-                        purchaseToken = purchaseAndroid.purchaseToken,
-                        quantity = purchaseAndroid.quantity ?: 1,
-                        transactionDate = purchaseAndroid.transactionDate ?: 0.0
-                    )
-                    iapStore.finishTransaction(purchaseInput, true)
+                    iapStore.finishTransaction(purchaseAndroid, true)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("AlternativeBilling", "Auto-finish failed: ${e.message}")
