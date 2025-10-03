@@ -2,6 +2,7 @@ package dev.hyo.openiap.listener
 
 import dev.hyo.openiap.OpenIapError
 import dev.hyo.openiap.Purchase
+import dev.hyo.openiap.UserChoiceBillingDetails
 
 /**
  * Listener for purchase updates
@@ -23,6 +24,18 @@ fun interface OpenIapPurchaseErrorListener {
      * @param error The error that occurred
      */
     fun onPurchaseError(error: OpenIapError)
+}
+
+/**
+ * Listener for User Choice Billing selection (Android)
+ * Fires when user selects alternative billing in the User Choice Billing dialog
+ */
+fun interface OpenIapUserChoiceBillingListener {
+    /**
+     * Called when user selects alternative billing
+     * @param details The user choice billing details
+     */
+    fun onUserChoiceBilling(details: UserChoiceBillingDetails)
 }
 
 /**

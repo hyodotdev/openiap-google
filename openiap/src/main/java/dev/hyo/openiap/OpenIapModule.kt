@@ -53,6 +53,7 @@ import dev.hyo.openiap.helpers.restorePurchases as restorePurchasesHelper
 import dev.hyo.openiap.helpers.toAndroidPurchaseArgs
 import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
 import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
+import dev.hyo.openiap.listener.OpenIapUserChoiceBillingListener
 import dev.hyo.openiap.utils.BillingConverters.toInAppProduct
 import dev.hyo.openiap.utils.BillingConverters.toPurchase
 import dev.hyo.openiap.utils.BillingConverters.toSubscriptionProduct
@@ -109,6 +110,7 @@ class OpenIapModule(
 
     private val purchaseUpdateListeners = mutableSetOf<OpenIapPurchaseUpdateListener>()
     private val purchaseErrorListeners = mutableSetOf<OpenIapPurchaseErrorListener>()
+    private val userChoiceBillingListeners = mutableSetOf<OpenIapUserChoiceBillingListener>()
     private var currentPurchaseCallback: ((Result<List<Purchase>>) -> Unit)? = null
 
     val initConnection: MutationInitConnectionHandler = { config ->
@@ -840,6 +842,14 @@ class OpenIapModule(
         purchaseErrorListeners.remove(listener)
     }
 
+    fun addUserChoiceBillingListener(listener: OpenIapUserChoiceBillingListener) {
+        userChoiceBillingListeners.add(listener)
+    }
+
+    fun removeUserChoiceBillingListener(listener: OpenIapUserChoiceBillingListener) {
+        userChoiceBillingListeners.remove(listener)
+    }
+
     override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<BillingPurchase>?) {
         Log.d(TAG, "onPurchasesUpdated: code=${billingResult.responseCode} msg=${billingResult.debugMessage} count=${purchases?.size ?: 0}")
         purchases?.forEachIndexed { index, purchase ->
@@ -929,12 +939,20 @@ class OpenIapModule(
                                     OpenIapLog.d("External transaction token: $externalToken", TAG)
                                     OpenIapLog.d("Products: $productIds", TAG)
 
-                                    // Call user's listener
-                                    val details = dev.hyo.openiap.listener.UserChoiceDetails(
+                                    // Create UserChoiceBillingDetails for the event
+                                    val billingDetails = dev.hyo.openiap.UserChoiceBillingDetails(
                                         externalTransactionToken = externalToken,
                                         products = productIds
                                     )
-                                    userChoiceBillingListener?.onUserSelectedAlternativeBilling(details)
+
+                                    // Notify all UserChoiceBilling listeners
+                                    userChoiceBillingListeners.forEach { listener ->
+                                        try {
+                                            listener.onUserChoiceBilling(billingDetails)
+                                        } catch (e: Exception) {
+                                            OpenIapLog.w("UserChoiceBilling listener error: ${e.message}", TAG)
+                                        }
+                                    }
                                 } else {
                                     OpenIapLog.w("Failed to extract user choice details", TAG)
                                 }
