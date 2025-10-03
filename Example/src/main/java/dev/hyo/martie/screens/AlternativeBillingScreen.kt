@@ -54,12 +54,20 @@ fun AlternativeBillingScreen(navController: NavController) {
 
         val store = OpenIapStore(appContext, alternativeBillingMode = selectedMode)
 
-        // Set user choice listener if in USER_CHOICE mode
+        // Add event-based listener for User Choice Billing
         if (selectedMode == AlternativeBillingMode.USER_CHOICE) {
-            store.setUserChoiceBillingListener { details ->
-                android.util.Log.d("UserChoice", "User selected alternative billing")
-                android.util.Log.d("UserChoice", "Token: ${details.externalTransactionToken}")
-                android.util.Log.d("UserChoice", "Products: ${details.products}")
+            store.addUserChoiceBillingListener { details ->
+                android.util.Log.d("UserChoiceEvent", "=== User Choice Billing Event ===")
+                android.util.Log.d("UserChoiceEvent", "External Token: ${details.externalTransactionToken}")
+                android.util.Log.d("UserChoiceEvent", "Products: ${details.products}")
+                android.util.Log.d("UserChoiceEvent", "==============================")
+
+                // Show result in UI
+                store.postStatusMessage(
+                    message = "User selected alternative billing\nToken: ${details.externalTransactionToken.take(20)}...\nProducts: ${details.products.joinToString()}",
+                    status = dev.hyo.openiap.store.PurchaseResultStatus.Info,
+                    productId = details.products.firstOrNull()
+                )
 
                 // TODO: Process payment with your payment system
                 // Then create token and report to backend
