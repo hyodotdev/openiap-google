@@ -84,7 +84,12 @@ fun SubscriptionFlowScreen(
 
     // SharedPreferences to track current offer (necessary since Google doesn't provide offer info)
     val prefs = remember { context.getSharedPreferences(SUBSCRIPTION_PREFS_NAME, Context.MODE_PRIVATE) }
-    val iapStore = storeParam ?: remember(appContext) { OpenIapStore(appContext) }
+    val iapStore = storeParam ?: remember(appContext) {
+        val storeKey = dev.hyo.martie.BuildConfig.OPENIAP_STORE
+        val appId = dev.hyo.martie.BuildConfig.HORIZON_APP_ID
+        runCatching { OpenIapStore(appContext, storeKey, appId) }
+            .getOrElse { OpenIapStore(appContext, "auto", appId) }
+    }
     val products by iapStore.products.collectAsState()
     val subscriptions by iapStore.subscriptions.collectAsState()
     val purchases by iapStore.availablePurchases.collectAsState()

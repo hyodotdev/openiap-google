@@ -1,7 +1,6 @@
 package dev.hyo.martie
 
 object IapConstants {
-    // App-defined SKU lists
     val INAPP_SKUS = listOf(
         "dev.hyo.martie.10bulbs",
         "dev.hyo.martie.30bulbs",
@@ -17,4 +16,3 @@ object IapConstants {
     const val PREMIUM_MONTHLY_BASE_PLAN = "premium"       // Monthly base plan
     const val PREMIUM_YEARLY_BASE_PLAN = "premium-year"   // Yearly base plan
 }
-
