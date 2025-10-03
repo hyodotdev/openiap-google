@@ -843,11 +843,11 @@ class OpenIapModule(
         purchaseErrorListeners.remove(listener)
     }
 
-    fun addUserChoiceBillingListener(listener: OpenIapUserChoiceBillingListener) {
+    override fun addUserChoiceBillingListener(listener: OpenIapUserChoiceBillingListener) {
         userChoiceBillingListeners.add(listener)
     }
 
-    fun removeUserChoiceBillingListener(listener: OpenIapUserChoiceBillingListener) {
+    override fun removeUserChoiceBillingListener(listener: OpenIapUserChoiceBillingListener) {
         userChoiceBillingListeners.remove(listener)
     }
 

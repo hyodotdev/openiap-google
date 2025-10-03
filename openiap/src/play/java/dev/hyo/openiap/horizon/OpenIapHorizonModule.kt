@@ -22,6 +22,7 @@ import dev.hyo.openiap.QueryHasActiveSubscriptionsHandler
 import dev.hyo.openiap.SubscriptionHandlers
 import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
 import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
+import dev.hyo.openiap.listener.OpenIapUserChoiceBillingListener
 
 /**
  * Play flavor stub that reuses the Play Billing pipeline.
@@ -118,5 +119,13 @@ class OpenIapHorizonModule(
 
     override fun setUserChoiceBillingListener(listener: dev.hyo.openiap.listener.UserChoiceBillingListener?) {
         delegate.setUserChoiceBillingListener(listener)
+    }
+
+    override fun addUserChoiceBillingListener(listener: OpenIapUserChoiceBillingListener) {
+        delegate.addUserChoiceBillingListener(listener)
+    }
+
+    override fun removeUserChoiceBillingListener(listener: OpenIapUserChoiceBillingListener) {
+        delegate.removeUserChoiceBillingListener(listener)
     }
 }

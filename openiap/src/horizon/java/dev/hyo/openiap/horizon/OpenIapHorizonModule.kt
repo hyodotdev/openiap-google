@@ -56,6 +56,7 @@ import dev.hyo.openiap.SubscriptionPurchaseErrorHandler
 import dev.hyo.openiap.SubscriptionPurchaseUpdatedHandler
 import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
 import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
+import dev.hyo.openiap.listener.OpenIapUserChoiceBillingListener
 import dev.hyo.openiap.helpers.onPurchaseError
 import dev.hyo.openiap.helpers.onPurchaseUpdated
 import dev.hyo.openiap.helpers.toAndroidPurchaseArgs
@@ -498,6 +499,14 @@ class OpenIapHorizonModule(
     }
 
     override fun setUserChoiceBillingListener(listener: dev.hyo.openiap.listener.UserChoiceBillingListener?) {
+        // Not supported on Horizon
+    }
+
+    override fun addUserChoiceBillingListener(listener: OpenIapUserChoiceBillingListener) {
+        // Not supported on Horizon
+    }
+
+    override fun removeUserChoiceBillingListener(listener: OpenIapUserChoiceBillingListener) {
         // Not supported on Horizon
     }
 }

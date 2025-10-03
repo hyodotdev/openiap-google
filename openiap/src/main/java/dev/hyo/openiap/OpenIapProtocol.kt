@@ -3,6 +3,7 @@ package dev.hyo.openiap
 import android.app.Activity
 import dev.hyo.openiap.listener.OpenIapPurchaseErrorListener
 import dev.hyo.openiap.listener.OpenIapPurchaseUpdateListener
+import dev.hyo.openiap.listener.OpenIapUserChoiceBillingListener
 
 /**
  * Shared contract implemented by platform-specific OpenIAP billing modules.
@@ -41,4 +42,6 @@ interface OpenIapProtocol {
     suspend fun showAlternativeBillingInformationDialog(activity: Activity): Boolean
     suspend fun createAlternativeBillingReportingToken(): String?
     fun setUserChoiceBillingListener(listener: dev.hyo.openiap.listener.UserChoiceBillingListener?)
+    fun addUserChoiceBillingListener(listener: OpenIapUserChoiceBillingListener)
+    fun removeUserChoiceBillingListener(listener: OpenIapUserChoiceBillingListener)
 }
