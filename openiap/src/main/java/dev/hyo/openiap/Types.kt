@@ -440,6 +440,11 @@ public data class ActiveSubscription(
      * Required for subscription upgrade/downgrade on Android
      */
     val purchaseTokenAndroid: String? = null,
+    /**
+     * Renewal information from StoreKit 2 (iOS only). Contains details about subscription renewal status,
+     * pending upgrades/downgrades, and auto-renewal preferences.
+     */
+    val renewalInfoIOS: RenewalInfoIOS? = null,
     val transactionDate: Double,
     val transactionId: String,
     val willExpireSoon: Boolean? = null
@@ -458,6 +463,7 @@ public data class ActiveSubscription(
                 productId = json["productId"] as String,
                 purchaseToken = json["purchaseToken"] as String?,
                 purchaseTokenAndroid = json["purchaseTokenAndroid"] as String?,
+                renewalInfoIOS = (json["renewalInfoIOS"] as Map<String, Any?>?)?.let { RenewalInfoIOS.fromJson(it) },
                 transactionDate = (json["transactionDate"] as Number).toDouble(),
                 transactionId = json["transactionId"] as String,
                 willExpireSoon = json["willExpireSoon"] as Boolean?,
@@ -477,6 +483,7 @@ public data class ActiveSubscription(
         "productId" to productId,
         "purchaseToken" to purchaseToken,
         "purchaseTokenAndroid" to purchaseTokenAndroid,
+        "renewalInfoIOS" to renewalInfoIOS?.toJson(),
         "transactionDate" to transactionDate,
         "transactionId" to transactionId,
         "willExpireSoon" to willExpireSoon,
@@ -1189,6 +1196,7 @@ public data class PurchaseIOS(
     val quantityIOS: Int? = null,
     val reasonIOS: String? = null,
     val reasonStringRepresentationIOS: String? = null,
+    val renewalInfoIOS: RenewalInfoIOS? = null,
     val revocationDateIOS: Double? = null,
     val revocationReasonIOS: String? = null,
     val storefrontCountryCodeIOS: String? = null,
@@ -1226,6 +1234,7 @@ public data class PurchaseIOS(
                 quantityIOS = (json["quantityIOS"] as Number?)?.toInt(),
                 reasonIOS = json["reasonIOS"] as String?,
                 reasonStringRepresentationIOS = json["reasonStringRepresentationIOS"] as String?,
+                renewalInfoIOS = (json["renewalInfoIOS"] as Map<String, Any?>?)?.let { RenewalInfoIOS.fromJson(it) },
                 revocationDateIOS = (json["revocationDateIOS"] as Number?)?.toDouble(),
                 revocationReasonIOS = json["revocationReasonIOS"] as String?,
                 storefrontCountryCodeIOS = json["storefrontCountryCodeIOS"] as String?,
@@ -1264,6 +1273,7 @@ public data class PurchaseIOS(
         "quantityIOS" to quantityIOS,
         "reasonIOS" to reasonIOS,
         "reasonStringRepresentationIOS" to reasonStringRepresentationIOS,
+        "renewalInfoIOS" to renewalInfoIOS?.toJson(),
         "revocationDateIOS" to revocationDateIOS,
         "revocationReasonIOS" to revocationReasonIOS,
         "storefrontCountryCodeIOS" to storefrontCountryCodeIOS,
@@ -1428,9 +1438,52 @@ public data class RefundResultIOS(
     )
 }
 
+/**
+ * Subscription renewal information from Product.SubscriptionInfo.RenewalInfo
+ * https://developer.apple.com/documentation/storekit/product/subscriptioninfo/renewalinfo
+ */
 public data class RenewalInfoIOS(
     val autoRenewPreference: String? = null,
+    /**
+     * When subscription expires due to cancellation/billing issue
+     * Possible values: "VOLUNTARY", "BILLING_ERROR", "DID_NOT_AGREE_TO_PRICE_INCREASE", "PRODUCT_NOT_AVAILABLE", "UNKNOWN"
+     */
+    val expirationReason: String? = null,
+    /**
+     * Grace period expiration date (milliseconds since epoch)
+     * When set, subscription is in grace period (billing issue but still has access)
+     */
+    val gracePeriodExpirationDate: Double? = null,
+    /**
+     * True if subscription failed to renew due to billing issue and is retrying
+     * Note: Not directly available in RenewalInfo, available in Status
+     */
+    val isInBillingRetry: Boolean? = null,
     val jsonRepresentation: String? = null,
+    /**
+     * Product ID that will be used on next renewal (when user upgrades/downgrades)
+     * If set and different from current productId, subscription will change on expiration
+     */
+    val pendingUpgradeProductId: String? = null,
+    /**
+     * User's response to subscription price increase
+     * Possible values: "AGREED", "PENDING", null (no price increase)
+     */
+    val priceIncreaseStatus: String? = null,
+    /**
+     * Expected renewal date (milliseconds since epoch)
+     * For active subscriptions, when the next renewal/charge will occur
+     */
+    val renewalDate: Double? = null,
+    /**
+     * Offer ID applied to next renewal (promotional offer, subscription offer code, etc.)
+     */
+    val renewalOfferId: String? = null,
+    /**
+     * Type of offer applied to next renewal
+     * Possible values: "PROMOTIONAL", "SUBSCRIPTION_OFFER_CODE", "WIN_BACK", etc.
+     */
+    val renewalOfferType: String? = null,
     val willAutoRenew: Boolean
 ) {
 
@@ -1438,7 +1491,15 @@ public data class RenewalInfoIOS(
         fun fromJson(json: Map<String, Any?>): RenewalInfoIOS {
             return RenewalInfoIOS(
                 autoRenewPreference = json["autoRenewPreference"] as String?,
+                expirationReason = json["expirationReason"] as String?,
+                gracePeriodExpirationDate = (json["gracePeriodExpirationDate"] as Number?)?.toDouble(),
+                isInBillingRetry = json["isInBillingRetry"] as Boolean?,
                 jsonRepresentation = json["jsonRepresentation"] as String?,
+                pendingUpgradeProductId = json["pendingUpgradeProductId"] as String?,
+                priceIncreaseStatus = json["priceIncreaseStatus"] as String?,
+                renewalDate = (json["renewalDate"] as Number?)?.toDouble(),
+                renewalOfferId = json["renewalOfferId"] as String?,
+                renewalOfferType = json["renewalOfferType"] as String?,
                 willAutoRenew = json["willAutoRenew"] as Boolean,
             )
         }
@@ -1447,7 +1508,15 @@ public data class RenewalInfoIOS(
     fun toJson(): Map<String, Any?> = mapOf(
         "__typename" to "RenewalInfoIOS",
         "autoRenewPreference" to autoRenewPreference,
+        "expirationReason" to expirationReason,
+        "gracePeriodExpirationDate" to gracePeriodExpirationDate,
+        "isInBillingRetry" to isInBillingRetry,
         "jsonRepresentation" to jsonRepresentation,
+        "pendingUpgradeProductId" to pendingUpgradeProductId,
+        "priceIncreaseStatus" to priceIncreaseStatus,
+        "renewalDate" to renewalDate,
+        "renewalOfferId" to renewalOfferId,
+        "renewalOfferType" to renewalOfferType,
         "willAutoRenew" to willAutoRenew,
     )
 }
