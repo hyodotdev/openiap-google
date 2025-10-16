@@ -1,8 +1,29 @@
 # OpenIAP Android
 
+> [!WARNING]
+>
+> ## ⚠️ DEPRECATED - Repository Moved
+>
+> **This repository has been deprecated and is no longer maintained.**
+>
+> The OpenIAP Android implementation has been moved to the official monorepo:
+>
+> ### 👉 **[https://github.com/hyodotdev/openiap](https://github.com/hyodotdev/openiap)**
+>
+> Please update your bookmarks and use the monorepo for:
+>
+> - Latest updates and releases
+> - Bug reports and issues
+> - Feature requests
+> - Contributing
+>
+> All future development will happen in the monorepo. This repository will remain available for historical reference only.
+
+---
+
 <div align="center">
   <img src="./logo.png" alt="OpenIAP Google Logo" width="120" height="120">
-  
+
   <p><strong>Android implementation of the <a href="https://www.openiap.dev/">OpenIAP</a> specification using Google Play Billing.</strong></p>
 </div>
 
